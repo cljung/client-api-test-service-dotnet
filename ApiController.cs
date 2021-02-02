@@ -74,18 +74,15 @@ namespace client_api_test_service_dotnet
         }
 
         // set a cookie
-        private void SetCookie( string key, string body ) //, DateTimeOffset? expires)
+        private void SetCookie( string key, string body ) 
         {
-            DateTime dat = DateTime.UtcNow.AddSeconds(this.AppSettings.CookieExpiresInSeconds);
             CookieOptions option = new CookieOptions();
             option.HttpOnly = true;
             option.Domain = this.Request.Host.Host;
             option.Path = "/";
             option.SameSite = SameSiteMode.None;
             option.Secure = this.Request.IsHttps;
-            //if (expires.HasValue)
-            //    option.Expires = expires.Value;
-            option.Expires = dat;
+            option.Expires = DateTime.UtcNow.AddSeconds(this.AppSettings.CookieExpiresInSeconds);
             string b64 = System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(body));
             this.Response.Cookies.Append( key, b64, option);
         }
@@ -191,7 +188,7 @@ namespace client_api_test_service_dotnet
                 if ( !HttpPost(jsonString, out statusCode, out contents))  {
                     return ReturnErrorMessage( contents );
                 }
-                SetCookie(this.AppSettings.CookieKey, state); // , null );
+                SetCookie(this.AppSettings.CookieKey, state); 
                 return ReturnJson( contents );
             }  catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
