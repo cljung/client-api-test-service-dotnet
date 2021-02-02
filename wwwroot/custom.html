@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Verifiable Credential Request Generator</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="icon" href="./images/did_logo.png">
+    
+    <link rel="stylesheet" type="text/css" media="screen" href="css/main.css" />
+    
+    <title>Verifiable Credential Request Generator</title>
+    
+    <!-- Bootstrap core CSS -->
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Custom styles for this template -->
+    <link href="./css/starter-template.css" rel="stylesheet">
+</head>
+<body>
+   
+    <div class="corner-ribbon top-right sticky blue shadow">Preview</div>
+
+    <nav class="navbar navbar-expand-md navbar-dark fixed-top bg-dark">
+        <a class="navbar-brand" href="./index.html">Decentralized Identity Team</a>
+        <link rel="icon" href="./images/did_logo.png">
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+              <a class="nav-link" href="./index.html">Home <span class="sr-only">(current)</span></a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="./issuance.html">Issuance</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="./presentation.html">Presentation</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="./custom.html">Contract Validator</a>
+              </li>
+          </ul>
+        </div>
+    </nav>
+
+    <main role="main" class="starter-template">
+        <h1 class="lead">Contract Validator</h1>
+        <div>
+            <div id="contractValidatorContainer">
+                <p class="lead small">Enter your contract url to validate that the contract is valid.</p>
+                <form class="credentialForm">
+                    <div class="form-group">
+                      <input class="form-control" id="contractUrlForValidation" placeholder="Enter Contract Url">
+                      <small id="formHelp" class="form-text text-muted">We'll never share your contract url with anyone else.</small>
+                    </div>
+                  </form>
+                  <button class="btn btn-outline-dark" onclick="fetchAndValidateContract()">Validate Contract</button>
+                  <div id="validationResultDiv">
+                      <h3 id="validationResult"></h3>
+                  </div>
+            </div>
+        <div>
+            <div id="credentialRequestsContainer">
+                <h2 class="lead">Custom Issuance Validator</h2>
+                <p class="lead small">Enter your contract url, credential type, and issuer DID to test issuance/presentation of this verifiable credential.</p>
+                <form class="credentialForm">
+                    <div class="form-group">
+                      <input class="form-control" id="contract1" placeholder="Enter Contract Url">
+                    </div>
+                    <div class="form-group">
+                      <input class="form-control" id="type1" placeholder="Enter Credential Type">
+                    </div>
+                    <div class="form-group">
+                        <input class="form-control" id="issuer1" placeholder="Enter Issuer DID">
+                        <small id="formHelp" class="form-text text-muted">The DID associated with the issuance service (can be found in contract).</small>
+                        <small id="formHelp" class="form-text text-muted">We'll never share this information.</small>
+                      </div>
+                  </form>
+                  <button class="btn btn-outline-dark" onclick="createRequest(true)">Create QR Code</button>
+            </div>
+           <!-- <a role="button" class="btn btn-primary" onclick="addVcInput()">Add Another</a> -->
+        </div>
+        
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Scan Request</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+        </div>
+        <div class="modal-body">
+            <div id="qr_output"></div>
+            <br>
+            <div class="lead" id="requestId"></div>
+            <a id="deepLinkToWalletButton" role="button" class="btn btn-outline-dark">Deeplink to Wallet</a>
+        </div>
+        <div class="modal-footer">
+        <a id="getRequestTokenButton" role="button" class="btn btn-outline-dark" onclick="getRequestToken()">Get Request Token</a>
+        <button type="button" class="btn btn-primary" onclick="checkResponse()">Check for Response</button>
+        </div>
+    </div>
+    </div>
+</div>
+    </main>
+
+    <script src="./js/qr.js" type="text/javascript"></script>
+    <script src="./js/demo.js" type="text/javascript"></script>
+    <script src="./js/contracts.js" type="text/javascript"></script>
+    <script src="./js/contractValidator.js" type="text/javascript"></script>
+
+<!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+</body>
+</html>
+

@@ -1,0 +1,19 @@
+{
+  "authority": "did:ion:EiA2vN6l-FWek4-Tvc67Lx_h6Adr2N_bQmXJ7e3aDLPPwg",
+  "registration": {
+    "clientName": "Contoso University"
+  },
+  "issuance": {
+    "type": "ExternalIdTokenCard",
+    "manifest": "https://portableidentitycards.azure-api.net/dev/536279f6-15cc-45f2-be2d-61e352b51eef/portableIdentities/contracts/ExternalClaimsClientAPI",
+    "pin": {
+      "value": "012345",
+      "type": "numeric",
+      "length": 6
+    },
+    "claims": {
+      "mySpecialClaimOne": "mySpecialValueOne",
+      "mySpecialClaimTwo": "mySpecialValueTwo"
+    }
+  }
+}

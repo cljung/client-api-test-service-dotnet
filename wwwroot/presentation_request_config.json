@@ -1,0 +1,20 @@
+{
+  "authority": "did:ion:EiA2vN6l-FWek4-Tvc67Lx_h6Adr2N_bQmXJ7e3aDLPPwg",
+  "registration": {
+    "clientName": "Woodgrove Employment Verification",
+    "logoUrl": "https://test-relyingparty.azurewebsites.net/images/did_logo.png"
+  },
+  "presentation": {
+    "to": "api",
+    "endpoint": "https://did-test-client.azurewebsites.net/response",
+    "nonce": "snfdc3287yrcefj",
+    "state": "mymagicstate",
+    "requestedCredentials": [
+      {
+        "type": "VerifiedAIEngineerCertificate",
+        "manifest": "https://portableidentitycards.azure-api.net/v1.0/9c59be8b-bd18-45d9-b9d9-082bc07c094f/portableIdentities/contracts/AIEngineerCert",
+        "purpose": "To prove that youa re an AI expert."
+      }
+    ]
+  }
+}
