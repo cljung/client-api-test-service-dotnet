@@ -156,6 +156,12 @@ namespace client_api_test_service_dotnet
                 }
                 JObject issuanceRequestConfig = JObject.Parse(jsonString);
                 issuanceRequestConfig["issuance"]["pin"]["value"] = pin;
+                string urlCallback = issuanceRequestConfig["issuance"]["callback"].ToString();
+                if (string.IsNullOrWhiteSpace(urlCallback))
+                    urlCallback = "https://did-test-client.azurewebsites.net/requestCallback/";
+                if (!urlCallback.EndsWith("/"))
+                    urlCallback += "/";
+                issuanceRequestConfig["issuance"]["callback"] = $"{urlCallback}{pin}";
                 jsonString = JsonConvert.SerializeObject(issuanceRequestConfig);
                 string contents = "";
                 HttpStatusCode statusCode = HttpStatusCode.OK;
@@ -207,6 +213,53 @@ namespace client_api_test_service_dotnet
                 return ReturnErrorMessage( ex.Message );
             }
         }
+        [HttpPost("/requestCallback/{pin}")]
+        public async Task<ActionResult> requestCallback(string pin)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(pin))
+                {
+                    return ReturnErrorMessage("Missing argument 'pin' in body");
+                }
+                _cache.Set(pin, true.ToString() );
+                return new OkResult();
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage(ex.Message);
+            }
+        }
+        [HttpGet("/checkCallback/{pin}")]
+        public async Task<ActionResult> checkCallback(string pin)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(pin))
+                {
+                    return ReturnErrorMessage("Missing argument 'pin'");
+                }
+                string buf = "false";
+                if (!_cache.TryGetValue(pin, out buf))
+                    buf = "false";
+                bool wasCallbackHit = false;
+                bool.TryParse(buf, out wasCallbackHit);
+                if ( wasCallbackHit )
+                {
+                    _cache.Remove(pin);
+                    return new ContentResult { ContentType = "text/plain", Content = pin };
+                }
+                else
+                {
+                    return ReturnErrorMessage("callback url was not hit yet for specific request: " + pin);
+                }
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage(ex.Message);
+            }
+        }
+
         [HttpGet]
         public async Task<ActionResult> checkResponse()
         {

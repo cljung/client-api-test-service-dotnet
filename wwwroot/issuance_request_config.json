@@ -11,6 +11,7 @@
       "type": "numeric",
       "length": 6
     },
+    "callback": "https://did-test-client.azurewebsites.net/requestCallback/",
     "claims": {
       "mySpecialClaimOne": "mySpecialValueOne",
       "mySpecialClaimTwo": "mySpecialValueTwo"
