@@ -1,0 +1,89 @@
+﻿<!-- Copyright (c) Microsoft Corporation. All rights reserved.
+     Licensed under the MIT License. -->
+
+     <html lang="en">
+
+        <head>
+            <meta charset="utf-8">
+            <title>DotNet Client API VC Issuer Version</title>
+            <meta name="description" content="NinjaCard Verifiable Credentials">
+            <meta name="author" content="Microsoft">
+            <link rel="stylesheet" href="styles.css">
+            <link rel="icon" href="favicon.png">
+          
+        </head>
+        
+        <body>
+            <div id="wrap">
+                <center><h3>DotNet Client API VC Issuer Version</h3></center>
+                <div style="text-align: center;">
+                    <!--<img id="vcLogo" src="ninja-icon.png" height=200px; />-->
+                    <img id="vcLogo" src="logo.png" height=200px; />
+                    <h1 id="vcType">NinjaCard Credential Issuance</h1>
+                    <h3 id="vcDescription"></h3>
+                    <button type="button" id="sign-in" class="button">GET CREDENTIAL</button>
+                    <div id="qrText" style="display:none;">
+                        <p class="small-text">
+                            <img src="authenticator-icon.png" alt="Authenticator icon" class="icon-small"><br>
+                            Scan with Microsoft Authenticator
+                        </p>
+                    </div>
+                    <a id="deeplink" style="display: none;margin-top: 10px;">Tap to open Authenticator on mobile</a>
+                    <div id="qrcodeFrame" style="background:white;display:none">
+                        <div id="qrcode" style="text-align: center; padding:25px"></div>
+                    </div>
+
+                    <script src="qrcode.min.js"></script>
+                    <script>
+                        var signIn = document.getElementById('sign-in');
+                        var signOut = document.getElementById('sign-out');
+                        var display = document.getElementById('display');
+                        var qrcode = new QRCode("qrcode", { width: 300, height: 300 });
+
+                        var respIssuanceReq = null;
+                        signIn.addEventListener('click', () => {
+                            fetch('api/issuer/issuanceReference')
+                                .then(response => response.text())
+                                .catch(error => document.getElementById("message").innerHTML = error)
+                                .then(response => {
+                                    if (response.length > 0) {
+                                        //console.log(response)
+                                        respIssuanceReq = JSON.parse(response);
+                                        qrcode.makeCode(respIssuanceReq.url);
+                                        document.getElementById('qrText').style.display = "block";
+                                        document.getElementById('qrcodeFrame').style.display = "block";
+                                        document.getElementsByTagName("img")[2].src = respPresReq.qrCode;
+                                        document.getElementById('sign-in').style.display = "none";
+                                    }
+                                })
+                        })
+
+                        fetch('api/issuer/echo')
+                            .then(response => response.text())
+                            .catch(error => document.getElementById("message").innerHTML = error)
+                            .then(response => {
+                                if (response.length > 0) {
+                                    var data = JSON.parse(response);
+                                    document.getElementById('vcType').innerText = data.credentialType + " Issuance";
+                                    document.getElementById('vcDescription').innerText = data.displayCard.description;
+                                    document.body.style.backgroundColor = data.displayCard.backgroundColor;
+                                    document.body.style.color = data.displayCard.textColor;
+                                    document.getElementById('sign-in').style.backgroundColor = data.buttonColor;
+                                    document.title = data.credentialType + ' Verifiable Credentials';
+                                }
+                            })
+
+                    </script>
+                </div>
+            <footer>
+                <p class="text-center text-gray tiny-text margin-top-75">
+                    <strong>SDK Version:</strong>not using VC SDK</BR></BR>
+                    <strong>API Version:</strong>private preview</BR></BR>
+                    <strong>Minimum MS Authenticator version required:</strong></BR></BR>
+                    Android: 6.2104.2348</BR>
+                    IOS: 6.5.53
+                </p>
+            </footer>
+            </div>
+        </body>
+        </html>

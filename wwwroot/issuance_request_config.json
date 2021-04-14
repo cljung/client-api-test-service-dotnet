@@ -1,17 +1,23 @@
 {
-  "authority": "did:ion:EiA2vN6l-FWek4-Tvc67Lx_h6Adr2N_bQmXJ7e3aDLPPwg",
+  "authority": "did-of-the Issuer",
+  "includeQRCode": true,
   "registration": {
-    "clientName": "Contoso University"
+    "clientName": "the verifier's client name",
+    "logoUrl": "https://test-relyingparty.azurewebsites.net/images/did_logo.png"
   },
   "issuance": {
-    "type": "ExternalIdTokenCard",
+    "type": "your credentialType",
     "manifest": "https://portableidentitycards.azure-api.net/dev/536279f6-15cc-45f2-be2d-61e352b51eef/portableIdentities/contracts/ExternalClaimsClientAPI",
+    "callback": "endpoint to your callback when VC is presented and validated",
+    "nonce": "...",
+    "state": "you pass your state here to correlate it when you get the callback",
+    "includeReceipt": true,
     "pin": {
       "value": "012345",
       "type": "numeric",
-      "length": 6
+      "length": 6,
+      "digest": "sha256"
     },
-    "callback": "https://did-test-client.azurewebsites.net/requestCallback/",
     "claims": {
       "mySpecialClaimOne": "mySpecialValueOne",
       "mySpecialClaimTwo": "mySpecialValueTwo"

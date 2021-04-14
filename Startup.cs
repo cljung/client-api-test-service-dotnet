@@ -2,6 +2,7 @@ using client_api_test_service_dotnet.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -26,6 +27,16 @@ namespace client_api_test_service_dotnet
         {
             services.AddControllersWithViews();
             services.Configure<AppSettingsModel>(Configuration.GetSection("AppSettings"));
+            // If using Kestrel:
+            services.Configure<KestrelServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
+            });
+            // If using IIS:
+            services.Configure<IISServerOptions>(options =>
+            {
+                options.AllowSynchronousIO = true;
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -41,7 +52,10 @@ namespace client_api_test_service_dotnet
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-            app.UseHttpsRedirection();
+            if (!env.IsDevelopment())
+            {
+                app.UseHttpsRedirection();
+            }
             app.UseDefaultFiles();
             app.UseStaticFiles();
             app.UseRouting();
@@ -50,6 +64,7 @@ namespace client_api_test_service_dotnet
             {
                 endpoints.MapDefaultControllerRoute();
             });
+
         }
     }
 }

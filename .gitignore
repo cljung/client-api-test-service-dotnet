@@ -5,6 +5,8 @@ project.lock.json
 *.pyc
 nupkg/
 
+ignore-this/
+
 # Visual Studio Code
 .vscode
 
@@ -35,3 +37,6 @@ msbuild.wrn
 
 # Visual Studio 2015
 .vs/
+
+# ignore (private) dev settings
+appsettings.[Dd]evelopment.json
