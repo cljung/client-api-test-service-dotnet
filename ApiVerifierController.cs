@@ -90,7 +90,6 @@ namespace client_api_test_service_dotnet
         {
             response = null;
             HttpClient client = new HttpClient();
-            client = new HttpClient();
             client.DefaultRequestHeaders.Add("x-ms-functions-key", this.AppSettings.ApiKey);
             HttpResponseMessage res = client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json")).Result;
             response = res.Content.ReadAsStringAsync().Result;
@@ -102,7 +101,6 @@ namespace client_api_test_service_dotnet
         {
             response = null;
             HttpClient client = new HttpClient();
-            client = new HttpClient();
             HttpResponseMessage res = client.GetAsync( url ).Result;
             response = res.Content.ReadAsStringAsync().Result;
             client.Dispose();
@@ -129,11 +127,9 @@ namespace client_api_test_service_dotnet
         private string GetDidManifest()
         {
             string contents = null;
-            if (!_cache.TryGetValue("manifest", out contents))
-            {
+            if (!_cache.TryGetValue("manifest", out contents)) {
                 HttpStatusCode statusCode = HttpStatusCode.OK;
-                if (HttpGet(AppSettings.manifest, out statusCode, out contents))
-                {
+                if (HttpGet(AppSettings.manifest, out statusCode, out contents)) {
                     _cache.Set("manifest", contents);
                 }
             }
@@ -162,9 +158,7 @@ namespace client_api_test_service_dotnet
                     contract = manifest["display"]["contract"]
                 };
                 return ReturnJson(JsonConvert.SerializeObject(info));
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
             }
         }
@@ -226,12 +220,10 @@ namespace client_api_test_service_dotnet
         [HttpPost]
         public async Task<ActionResult> presentationCallback()
         {
-            try
-            {
+            try {
                 string body = GetRequestBody();
                 JObject presentationResponse = JObject.Parse(body);
-                if (presentationResponse["message"].ToString() == "request_retrieved")
-                {
+                if (presentationResponse["message"].ToString() == "request_retrieved") {
                     string requestId = presentationResponse["requestId"].ToString();
                     var cacheData = new {
                         status = 1,
@@ -240,8 +232,7 @@ namespace client_api_test_service_dotnet
                     };
                     _cache.Set(requestId, JsonConvert.SerializeObject(cacheData));
                 }
-                if (presentationResponse["message"].ToString() == "presentation_verified")
-                {
+                if (presentationResponse["message"].ToString() == "presentation_verified") {
                     var presentationPath = presentationResponse["presentationReceipt"]["presentation_submission"]["descriptor_map"][0]["path"].ToString();
                     JObject presentation = JWTTokenToJObject( presentationResponse["presentationReceipt"].SelectToken(presentationPath).ToString() );
                     string vcToken = presentation["vp"]["verifiableCredential"][0].ToString();
@@ -255,9 +246,7 @@ namespace client_api_test_service_dotnet
                     _cache.Set(state, JsonConvert.SerializeObject(cacheData));
                 }
                 return new OkResult();
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
             }
         }
@@ -267,8 +256,7 @@ namespace client_api_test_service_dotnet
         {
             try {
                 string state = this.Request.Query["id"];
-                if (string.IsNullOrEmpty(state))
-                {
+                if (string.IsNullOrEmpty(state)) {
                     return ReturnErrorMessage("Missing argument 'id'");
                 }
                 string body = null;
@@ -285,8 +273,7 @@ namespace client_api_test_service_dotnet
                 }
                 return new OkResult();
                 //return ReturnJson(JsonConvert.SerializeObject(info));
-            }
-            catch (Exception ex) {
+            } catch (Exception ex) {
                 return ReturnErrorMessage( ex.Message );
             }
         }

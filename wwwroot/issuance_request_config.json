@@ -2,8 +2,7 @@
   "authority": "did-of-the Issuer",
   "includeQRCode": true,
   "registration": {
-    "clientName": "the verifier's client name",
-    "logoUrl": "https://test-relyingparty.azurewebsites.net/images/did_logo.png"
+    "clientName": "the verifier's client name"
   },
   "issuance": {
     "type": "your credentialType",
@@ -11,12 +10,10 @@
     "callback": "endpoint to your callback when VC is presented and validated",
     "nonce": "...",
     "state": "you pass your state here to correlate it when you get the callback",
-    "includeReceipt": true,
     "pin": {
       "value": "012345",
       "type": "numeric",
-      "length": 6,
-      "digest": "sha256"
+      "length": 6
     },
     "claims": {
       "mySpecialClaimOne": "mySpecialValueOne",

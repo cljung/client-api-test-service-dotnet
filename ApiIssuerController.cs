@@ -91,7 +91,6 @@ namespace client_api_test_service_dotnet
         {
             response = null;
             HttpClient client = new HttpClient();
-            client = new HttpClient();
             client.DefaultRequestHeaders.Add("x-ms-functions-key", this.AppSettings.ApiKey);
             HttpResponseMessage res = client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json")).Result;
             response = res.Content.ReadAsStringAsync().Result;
@@ -103,7 +102,6 @@ namespace client_api_test_service_dotnet
         {
             response = null;
             HttpClient client = new HttpClient();
-            client = new HttpClient();
             HttpResponseMessage res = client.GetAsync(url).Result;
             response = res.Content.ReadAsStringAsync().Result;
             client.Dispose();
@@ -123,11 +121,9 @@ namespace client_api_test_service_dotnet
         private string GetDidManifest()
         {
             string contents = null;
-            if (!_cache.TryGetValue("manifest", out contents))
-            {
+            if (!_cache.TryGetValue("manifest", out contents)) {
                 HttpStatusCode statusCode = HttpStatusCode.OK;
-                if (HttpGet(AppSettings.manifest, out statusCode, out contents))
-                {
+                if (HttpGet(AppSettings.manifest, out statusCode, out contents)) {
                     _cache.Set("manifest", contents);
                 }
             }
@@ -141,8 +137,7 @@ namespace client_api_test_service_dotnet
         [HttpGet]
         public async Task<ActionResult> echo()
         {
-            try
-            {
+            try {
                 JObject manifest = JObject.Parse(GetDidManifest());
                 var info = new
                 {
@@ -157,9 +152,7 @@ namespace client_api_test_service_dotnet
                     contract = manifest["display"]["contract"]
                 };
                 return ReturnJson(JsonConvert.SerializeObject(info));
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
             }
         }
@@ -181,26 +174,23 @@ namespace client_api_test_service_dotnet
                 if ( string.IsNullOrEmpty(jsonString) ) {
                     return ReturnErrorMessage( IssuanceRequestConfigFile + " not found" );
                 }
-
                 string state = Guid.NewGuid().ToString();
                 string nonce = Guid.NewGuid().ToString();
                 int pinMaxValue = int.Parse("".PadRight(this.AppSettings.PinCodeLength, '9'));          // 9999999
                 int randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
                 string pin = string.Format("{0:D" + this.AppSettings.PinCodeLength.ToString() + "}", randomNumber);
-
+                Console.WriteLine("pin={0}", pin);
                 JObject config = JObject.Parse(jsonString);
-
                 config["authority"] = AppSettings.didIssuer;
                 config["registration"]["clientName"] = AppSettings.client_name;
-                config["registration"]["logoUrl"] = AppSettings.client_logo_uri;
-                string urlCallback = string.Format("{0}/issuanceCallback/{1}", GetApiPath(), pin);
+                //string urlCallback = string.Format("{0}/issuanceCallback/{1}", GetApiPath(), pin);
+                string urlCallback = string.Format("{0}/issuanceCallback", GetApiPath() );
                 config["issuance"]["callback"] = urlCallback;
                 config["issuance"]["state"] = state;
                 config["issuance"]["nonce"] = nonce;
                 config["issuance"]["type"] = AppSettings.credentialType;
                 config["issuance"]["manifest"] = AppSettings.manifest;
                 config["issuance"]["pin"]["value"] = pin;
-
                 jsonString = JsonConvert.SerializeObject(config);
                 string contents = "";
                 HttpStatusCode statusCode = HttpStatusCode.OK;
@@ -221,13 +211,12 @@ namespace client_api_test_service_dotnet
         [HttpPost]
         public async Task<ActionResult> issuanceCallback()
         {
-            try
-            {
+            try {
                 Console.WriteLine("issuanceCallback");
                 string body = GetRequestBody();
+                Console.WriteLine(body);
                 JObject issuanceResponse = JObject.Parse(body);
-                if (issuanceResponse["message"].ToString() == "request_retrieved")
-                {
+                if (issuanceResponse["message"].ToString() == "request_retrieved") {
                     string requestId = issuanceResponse["requestId"].ToString();
                     var cacheData = new
                     {
@@ -238,9 +227,7 @@ namespace client_api_test_service_dotnet
                     _cache.Set(requestId, JsonConvert.SerializeObject(cacheData));
                 }
                 return new OkResult();
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
             }
         }
@@ -259,33 +246,26 @@ namespace client_api_test_service_dotnet
                 return ReturnErrorMessage( ex.Message );
             }
         }
-        [HttpPost("/requestCallback/{pin}")]
-        public async Task<ActionResult> requestCallback(string pin)
+        [HttpPost("/api/issuer/pinCallback/{pin}")]
+        public async Task<ActionResult> pinCallback(string pin)
         {
-            try
-            {
-                Console.WriteLine("requestCallback/{0}", pin);
-
-                if (string.IsNullOrEmpty(pin))
-                {
+            try {
+                Console.WriteLine("pinCallback/{0}", pin);
+                if (string.IsNullOrEmpty(pin)) {
                     return ReturnErrorMessage("Missing argument 'pin' in body");
                 }
                 _cache.Set(pin, true.ToString() );
                 return new OkResult();
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
             }
         }
-        [HttpGet("/checkCallback/{pin}")]
+        [HttpGet("/api/issuer/checkCallback/{pin}")]
         public async Task<ActionResult> checkCallback(string pin)
         {
-            try
-            {
+            try  {
                 Console.WriteLine("checkCallback/{0}", pin);
-                if (string.IsNullOrEmpty(pin))
-                {
+                if (string.IsNullOrEmpty(pin)) {
                     return ReturnErrorMessage("Missing argument 'pin'");
                 }
                 string buf = "false";
@@ -293,18 +273,39 @@ namespace client_api_test_service_dotnet
                     buf = "false";
                 bool wasCallbackHit = false;
                 bool.TryParse(buf, out wasCallbackHit);
-                if ( wasCallbackHit )
-                {
+                if ( wasCallbackHit ) {
                     _cache.Remove(pin);
                     return new ContentResult { ContentType = "text/plain", Content = pin };
-                }
-                else
-                {
+                } else {
                     return ReturnErrorMessage("callback url was not hit yet for specific request: " + pin);
                 }
+            } catch (Exception ex) {
+                return ReturnErrorMessage(ex.Message);
             }
-            catch (Exception ex)
-            {
+        }
+        [HttpGet]
+        public async Task<ActionResult> issuanceResponse()
+        {
+            try{
+                string state = this.Request.Query["id"];
+                if (string.IsNullOrEmpty(state)) {
+                    return ReturnErrorMessage("Missing argument 'id'");
+                }
+                string body = null;
+                if (_cache.TryGetValue(state, out body)) {
+                    _cache.Remove(state);
+                    return ReturnJson(body);
+                } else {
+                    //return ReturnErrorMessage( "No claims for state: " + state );
+                    string requestId = this.Request.Query["requestId"];
+                    if (!string.IsNullOrEmpty(requestId) && _cache.TryGetValue(requestId, out body)) {
+                        _cache.Remove(requestId);
+                        return ReturnJson(body);
+                    }
+                }
+                return new OkResult();
+                //return ReturnJson(JsonConvert.SerializeObject(info));
+            } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
             }
         }
