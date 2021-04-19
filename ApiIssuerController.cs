@@ -86,7 +86,6 @@ namespace client_api_test_service_dotnet
             }
         }
 
-        // set a cookie
         private bool HttpPost(string body, out HttpStatusCode statusCode, out string response)
         {
             response = null;
@@ -111,11 +110,14 @@ namespace client_api_test_service_dotnet
 
         private string GetRequestBody()
         {
+            return new System.IO.StreamReader(this.Request.Body).ReadToEndAsync().Result;
+            /*
             string body = null;
             using (var reader = new System.IO.StreamReader(this.Request.Body)) {
                 body = reader.ReadToEnd();
             }
             return body;
+            */
         }
 
         private string GetDidManifest()
@@ -176,10 +178,6 @@ namespace client_api_test_service_dotnet
                 }
                 string state = Guid.NewGuid().ToString();
                 string nonce = Guid.NewGuid().ToString();
-                int pinMaxValue = int.Parse("".PadRight(this.AppSettings.PinCodeLength, '9'));          // 9999999
-                int randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
-                string pin = string.Format("{0:D" + this.AppSettings.PinCodeLength.ToString() + "}", randomNumber);
-                Console.WriteLine("pin={0}", pin);
                 JObject config = JObject.Parse(jsonString);
                 config["authority"] = AppSettings.didIssuer;
                 config["registration"]["clientName"] = AppSettings.client_name;
@@ -190,15 +188,32 @@ namespace client_api_test_service_dotnet
                 config["issuance"]["nonce"] = nonce;
                 config["issuance"]["type"] = AppSettings.credentialType;
                 config["issuance"]["manifest"] = AppSettings.manifest;
-                config["issuance"]["pin"]["value"] = pin;
+                string pin = null;
+                if (this.AppSettings.PinCodeLength > 0 )
+                {
+                    int pinMaxValue = int.Parse("".PadRight(this.AppSettings.PinCodeLength, '9'));          // 9999999
+                    int randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
+                    pin = string.Format("{0:D" + this.AppSettings.PinCodeLength.ToString() + "}", randomNumber);
+                    Console.WriteLine("pin={0}", pin);
+                    config["issuance"]["pin"]["value"] = pin;
+                    config["issuance"]["pin"]["length"] = this.AppSettings.PinCodeLength;
+                }
+                else
+                {
+                    (config["issuance"] as JObject).Remove("pin");
+                }
                 jsonString = JsonConvert.SerializeObject(config);
+                Console.WriteLine(jsonString);
                 string contents = "";
                 HttpStatusCode statusCode = HttpStatusCode.OK;
                 if ( !HttpPost(jsonString, out statusCode, out contents) ) {
                     return ReturnErrorMessage( contents );
                 }
                 JObject requestConfig = JObject.Parse(contents);
-                requestConfig["pin"] = pin;
+                if (this.AppSettings.PinCodeLength > 0)
+                {
+                    requestConfig["pin"] = pin;
+                }
                 requestConfig["url"] = requestConfig["url"].ToString().Replace("https://aka.ms/vcrequest?", "https://draft.azure-api.net/api/client/v1.0/request?");
                 requestConfig.Add(new JProperty("id", state));
                 jsonString = JsonConvert.SerializeObject(requestConfig);

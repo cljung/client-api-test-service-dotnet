@@ -110,11 +110,14 @@ namespace client_api_test_service_dotnet
 
         private string GetRequestBody()
         {
+            return new System.IO.StreamReader(this.Request.Body).ReadToEndAsync().Result;
+            /*
             string body = null;
             using (var reader = new System.IO.StreamReader(this.Request.Body)) {
                 body = reader.ReadToEnd();
             }
             return body;
+            */
         }
 
         private JObject JWTTokenToJObject( string token )
