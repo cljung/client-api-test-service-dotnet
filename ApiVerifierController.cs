@@ -325,7 +325,7 @@ namespace client_api_test_service_dotnet
                     surName = vc["vc"]["credentialSubject"]["lastName"].ToString(),
                     iss = vc["iss"].ToString(),
                     sub = vc["sub"].ToString(),
-                    key = vc["sub"].ToString().Replace("did:ion:","idi.ion.").Split(":")[0],
+                    key = vc["sub"].ToString().Replace("did:ion:","did.ion.").Split(":")[0],
                     oid = sub,
                     tid = tid,
                     username = username
