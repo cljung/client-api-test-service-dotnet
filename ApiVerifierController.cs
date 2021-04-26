@@ -61,6 +61,14 @@ namespace client_api_test_service_dotnet
         {
             return new ContentResult { ContentType = "application/json", Content = json };
         }
+        private ActionResult ReturnErrorB2C(string message)
+        {
+            var msg = new
+            {
+                version = "1.0.0", status = 400, userMessage = message
+            };
+            return new ContentResult { ContentType = "application/json", Content = JsonConvert.SerializeObject(msg) };
+        }
         // read & cache the file
         private string ReadFile(string filename)
         {
@@ -278,6 +286,55 @@ namespace client_api_test_service_dotnet
                 //return ReturnJson(JsonConvert.SerializeObject(info));
             } catch (Exception ex) {
                 return ReturnErrorMessage( ex.Message );
+            }
+        }
+        [HttpPost]
+        public async Task<ActionResult> presentationResponseB2C()
+        {
+            try
+            {
+                string body = GetRequestBody();
+                JObject presentationResponse = JObject.Parse(body);
+                string state = presentationResponse["id"].ToString();
+                if (string.IsNullOrEmpty(state)) {
+                    return ReturnErrorMessage("Missing argument 'id'");
+                }
+                if ( !_cache.TryGetValue(state, out body)) {
+                    return ReturnErrorB2C("Verifiable Credentials not presented"); // 409
+                }
+                // remove cache data now, because if we crash, we don't want to get into an infinite loop of crashing 
+                _cache.Remove(state);
+                var cacheData = JObject.Parse(body);                
+                JObject vc = JWTTokenToJObject( cacheData["vc"].ToString() );
+                // these claims are optional
+                string sub = null;
+                string tid = null;
+                string username = null;
+                try {
+                    tid = vc["vc"]["credentialSubject"]["tid"].ToString();
+                    sub = vc["vc"]["credentialSubject"]["sub"].ToString();
+                    username = vc["vc"]["credentialSubject"]["username"].ToString();
+                } catch ( Exception ex) {
+                }
+                var b2cResponse = new {
+                    id = state,
+                    credentialsVerified = true,
+                    credentialType = AppSettings.credentialType,
+                    displayName = string.Format("{0} {1}", vc["vc"]["credentialSubject"]["firstName"], vc["vc"]["credentialSubject"]["lastName"]),
+                    givenName = vc["vc"]["credentialSubject"]["firstName"].ToString(),
+                    surName = vc["vc"]["credentialSubject"]["lastName"].ToString(),
+                    iss = vc["iss"].ToString(),
+                    sub = vc["sub"].ToString(),
+                    key = vc["sub"].ToString().Replace("did:ion:","idi.ion.").Split(":")[0],
+                    oid = sub,
+                    tid = tid,
+                    username = username
+                };
+                return ReturnJson(JsonConvert.SerializeObject(b2cResponse));
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage(ex.Message);
             }
         }
     } // cls
