@@ -13,6 +13,8 @@ namespace client_api_test_service_dotnet.Models
         public int CookieExpiresInSeconds { get; set; }
         public int PinCodeLength { get; set; }
 
+        public int CacheExpiresInSeconds { get; set; }
+
         public string didIssuer { get; set; }
         public string didVerifier { get; set; }
         public string manifest { get; set; }

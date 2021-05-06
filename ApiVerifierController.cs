@@ -190,7 +190,7 @@ namespace client_api_test_service_dotnet
             }
         }
 
-        [HttpGet]
+        [HttpGet("/api/verifier/presentation-request")]
         public async Task<ActionResult> presentationReference()
         {
             try {
@@ -225,6 +225,7 @@ namespace client_api_test_service_dotnet
                 //  iOS Authenticator doesn't allow redirects
                 apiResp["url"] = apiResp["url"].ToString().Replace("https://aka.ms/vcrequest?", "https://draft.azure-api.net/api/client/v1.0/request?");
                 apiResp.Add(new JProperty("id", state));
+                apiResp.Add(new JProperty("link", apiResp["url"].ToString()));
                 contents = JsonConvert.SerializeObject(apiResp);
                 return ReturnJson( contents );
             }  catch (Exception ex) {
@@ -245,7 +246,7 @@ namespace client_api_test_service_dotnet
                         message = "QR Code is scanned. Waiting for validation...",
                         vc = ""
                     };
-                    _cache.Set(requestId, JsonConvert.SerializeObject(cacheData));
+                    _cache.Set(requestId, JsonConvert.SerializeObject(cacheData), DateTimeOffset.Now.AddSeconds(this.AppSettings.CacheExpiresInSeconds));
                 }
                 if (presentationResponse["message"].ToString() == "presentation_verified") {
                     var presentationPath = presentationResponse["presentationReceipt"]["presentation_submission"]["descriptor_map"][0]["path"].ToString();
@@ -258,7 +259,7 @@ namespace client_api_test_service_dotnet
                         vc = vcToken
                     };
                     string state = presentationResponse["state"].ToString();
-                    _cache.Set(state, JsonConvert.SerializeObject(cacheData));
+                    _cache.Set(state, JsonConvert.SerializeObject(cacheData), DateTimeOffset.Now.AddSeconds( this.AppSettings.CacheExpiresInSeconds) );
                 }
                 return new OkResult();
             } catch (Exception ex) {
@@ -266,7 +267,7 @@ namespace client_api_test_service_dotnet
             }
         }
 
-        [HttpGet]
+        [HttpGet("/api/verifier/presentation-response")]
         public async Task<ActionResult> presentationResponse()
         {
             try {
@@ -276,7 +277,7 @@ namespace client_api_test_service_dotnet
                 }
                 string body = null;
                 if (_cache.TryGetValue( state, out body)) {
-                    _cache.Remove( state );
+                    //_cache.Remove( state ); // if you're not using B2C integration, uncomment this line
                     return ReturnJson(body);
                 } else {
                     //return ReturnErrorMessage( "No claims for state: " + state );

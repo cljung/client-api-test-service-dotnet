@@ -44,14 +44,14 @@
                         var cardTitle = "";
 
                         signIn.addEventListener('click', () => {
-                            fetch('api/verifier/presentationReference')
+                            fetch('api/verifier/presentation-request')
                                 .then(response => response.text())
                                 .catch(error => document.getElementById("message").innerHTML = error)
                                 .then(response => {
                                     if (response.length > 0) {
                                         console.log(response)
                                         respPresReq = JSON.parse(response);
-                                        qrcode.makeCode(respPresReq.url);
+                                        qrcode.makeCode(respPresReq.link);
                                         document.getElementById('qrText').style.display = "block";
                                         document.getElementById('qrcodeFrame').style.display = "block";
                                         document.getElementsByTagName("img")[2].src = respPresReq.qrCode;
@@ -62,7 +62,7 @@
                                 })
 
                             var checkStatus = setInterval(function () {
-                                fetch('api/verifier/presentationResponse?id=' + respPresReq.id + "&requestId=" + respPresReq.requestId)
+                                fetch('api/verifier/presentation-response?id=' + respPresReq.id + "&requestId=" + respPresReq.requestId)
                                     .then(response => response.text())
                                     .catch(error => document.getElementById("message").innerHTML = error)
                                     .then(response => {
