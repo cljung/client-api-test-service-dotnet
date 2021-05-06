@@ -67,7 +67,7 @@ namespace client_api_test_service_dotnet
             {
                 version = "1.0.0", status = 400, userMessage = message
             };
-            return new ContentResult { ContentType = "application/json", Content = JsonConvert.SerializeObject(msg) };
+            return new ContentResult { StatusCode = 409, ContentType = "application/json", Content = JsonConvert.SerializeObject(msg) };
         }
         // read & cache the file
         private string ReadFile(string filename)
@@ -198,6 +198,10 @@ namespace client_api_test_service_dotnet
                 if (string.IsNullOrEmpty(jsonString)) {
                     return ReturnErrorMessage( PresentationRequestConfigFile + " not found" );
                 }
+                // The 'state' variable is the identifier between the Browser session, this API and VC client API doing the validation.
+                // It is passed back to the Browser as 'Id' so it can poll for status, and in the presentationCallback (presentation_verified)
+                // we use it to correlate which verification that got completed, so we can update the cache and tell the correct Browser session
+                // that they are done
                 string state = Guid.NewGuid().ToString();
                 string nonce = Guid.NewGuid().ToString();
                 JObject config = JObject.Parse(jsonString);
