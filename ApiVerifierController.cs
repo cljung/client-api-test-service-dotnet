@@ -278,13 +278,13 @@ namespace client_api_test_service_dotnet
                 string body = null;
                 if (_cache.TryGetValue( state, out body)) {
                     //_cache.Remove( state ); // if you're not using B2C integration, uncomment this line
-                    return ReturnJson(body);
+                    return ReturnJson( TransformCacheDataToBrowserResponse( body ) );
                 } else {
                     //return ReturnErrorMessage( "No claims for state: " + state );
                     string requestId = this.Request.Query["requestId"];
                     if (!string.IsNullOrEmpty(requestId) && _cache.TryGetValue(requestId, out body)) {
                         _cache.Remove(requestId);
-                        return ReturnJson(body);
+                        return ReturnJson( TransformCacheDataToBrowserResponse( body ) );
                     }
                 }
                 return new OkResult();
@@ -292,6 +292,18 @@ namespace client_api_test_service_dotnet
             } catch (Exception ex) {
                 return ReturnErrorMessage( ex.Message );
             }
+        }
+
+        private string TransformCacheDataToBrowserResponse( string cacheData )
+        {
+            // we do this not to give all the cacheData to the browser
+            var json = JObject.Parse(cacheData);
+            var browserData = new
+            {
+                status = json["status"],
+                message = json["message"]
+            };
+            return JsonConvert.SerializeObject(browserData);
         }
         [HttpPost]
         public async Task<ActionResult> presentationResponseB2C()
