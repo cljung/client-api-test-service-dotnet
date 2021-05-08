@@ -13,123 +13,18 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using client_api_test_service_dotnet.Models;
+using Microsoft.Extensions.Logging;
 
 namespace client_api_test_service_dotnet
 {
     [Route("api/issuer/[action]")]
     [ApiController]
-    public class ApiIssuerController : ControllerBase
+    public class ApiIssuerController : ApiBaseVCController
     {
-        private IMemoryCache _cache;
-        private readonly IHostingEnvironment _env;
-        private readonly AppSettingsModel AppSettings;
-
         private const string IssuanceRequestConfigFile = "issuance_request_config.json";
 
-        public ApiIssuerController(IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IHostingEnvironment env)
+        public ApiIssuerController(IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiIssuerController> log) : base(appSettings, memoryCache, env, log)
         {
-            this.AppSettings = appSettings.Value;
-            _cache = memoryCache;
-            _env = env;
-        }
-
-        /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /// Helpers
-        /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        private string GetRequestHostName()
-        {
-            string scheme = "https";// : this.Request.Scheme;
-            string originalHost = this.Request.Headers["x-original-host"];
-            string hostname = "";
-            if (!string.IsNullOrEmpty(originalHost))
-                 hostname = string.Format("{0}://{1}", scheme, originalHost);
-            else hostname = string.Format("{0}://{1}", scheme, this.Request.Host);
-            return hostname;
-        }
-        private string GetApiPath()
-        {
-            return string.Format("{0}/api/issuer", GetRequestHostName());
-        }
-
-        // return 400 error-message
-        private ActionResult ReturnErrorMessage(string errorMessage)
-        {
-            return BadRequest(new { error = "400", error_description = errorMessage });
-        }
-        // return 200 json 
-        private ActionResult ReturnJson( string json )
-        {
-            return new ContentResult { ContentType = "application/json", Content = json };
-        }
-        // read & cache the file
-        private string ReadFile(string filename)
-        {
-            string json = null;
-            string path = Path.Combine(_env.WebRootPath, filename);
-            if (!_cache.TryGetValue(path, out json)) {
-                if (System.IO.File.Exists(path)) {
-                    json = System.IO.File.ReadAllText(path);
-                    _cache.Set(path, json);
-                }
-            }
-            return json;
-        }
-        // read and return a file
-        private ActionResult SendStaticJsonFile(string filename)
-        {
-            string json = ReadFile(filename);
-            if (!string.IsNullOrEmpty(json)) {
-                return ReturnJson( json );
-            } else {
-                return ReturnErrorMessage( filename + " not found" );
-            }
-        }
-
-        private bool HttpPost(string body, out HttpStatusCode statusCode, out string response)
-        {
-            response = null;
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Add("x-ms-functions-key", this.AppSettings.ApiKey);
-            HttpResponseMessage res = client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json")).Result;
-            response = res.Content.ReadAsStringAsync().Result;
-            client.Dispose();
-            statusCode = res.StatusCode;
-            return res.IsSuccessStatusCode;
-        }
-        private bool HttpGet(string url, out HttpStatusCode statusCode, out string response)
-        {
-            response = null;
-            HttpClient client = new HttpClient();
-            HttpResponseMessage res = client.GetAsync(url).Result;
-            response = res.Content.ReadAsStringAsync().Result;
-            client.Dispose();
-            statusCode = res.StatusCode;
-            return res.IsSuccessStatusCode;
-        }
-
-        private string GetRequestBody()
-        {
-            return new System.IO.StreamReader(this.Request.Body).ReadToEndAsync().Result;
-            /*
-            string body = null;
-            using (var reader = new System.IO.StreamReader(this.Request.Body)) {
-                body = reader.ReadToEnd();
-            }
-            return body;
-            */
-        }
-
-        private string GetDidManifest()
-        {
-            string contents = null;
-            if (!_cache.TryGetValue("manifest", out contents)) {
-                HttpStatusCode statusCode = HttpStatusCode.OK;
-                if (HttpGet(AppSettings.manifest, out statusCode, out contents)) {
-                    _cache.Set("manifest", contents);
-                }
-            }
-            return contents;
         }
 
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -139,6 +34,7 @@ namespace client_api_test_service_dotnet
         [HttpGet]
         public async Task<ActionResult> echo()
         {
+            TraceHttpRequest();
             try {
                 JObject manifest = JObject.Parse(GetDidManifest());
                 var info = new
@@ -162,15 +58,17 @@ namespace client_api_test_service_dotnet
         [HttpGet]
         public async Task<ActionResult> issuance()
         {
-            try{
+            TraceHttpRequest();
+            try {
                 return SendStaticJsonFile(IssuanceRequestConfigFile);
             } catch (Exception ex) {
                 return ReturnErrorMessage( ex.Message );
             }
         }
-        [HttpGet]
+        [HttpGet("/api/issuer/issue-request")]
         public async Task<ActionResult> issuanceReference()
         {
+            TraceHttpRequest();
             try {
                 string jsonString = ReadFile(IssuanceRequestConfigFile);
                 if ( string.IsNullOrEmpty(jsonString) ) {
@@ -189,29 +87,25 @@ namespace client_api_test_service_dotnet
                 config["issuance"]["type"] = AppSettings.credentialType;
                 config["issuance"]["manifest"] = AppSettings.manifest;
                 string pin = null;
-                if (this.AppSettings.PinCodeLength > 0 )
-                {
+                if (this.AppSettings.PinCodeLength > 0 ) {
                     int pinMaxValue = int.Parse("".PadRight(this.AppSettings.PinCodeLength, '9'));          // 9999999
                     int randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
                     pin = string.Format("{0:D" + this.AppSettings.PinCodeLength.ToString() + "}", randomNumber);
-                    Console.WriteLine("pin={0}", pin);
+                    _log.LogTrace("pin={0}", pin);
                     config["issuance"]["pin"]["value"] = pin;
                     config["issuance"]["pin"]["length"] = this.AppSettings.PinCodeLength;
-                }
-                else
-                {
+                } else {
                     (config["issuance"] as JObject).Remove("pin");
                 }
                 jsonString = JsonConvert.SerializeObject(config);
-                Console.WriteLine(jsonString);
+                _log.LogTrace(jsonString);
                 string contents = "";
                 HttpStatusCode statusCode = HttpStatusCode.OK;
                 if ( !HttpPost(jsonString, out statusCode, out contents) ) {
                     return ReturnErrorMessage( contents );
                 }
                 JObject requestConfig = JObject.Parse(contents);
-                if (this.AppSettings.PinCodeLength > 0)
-                {
+                if (this.AppSettings.PinCodeLength > 0) {
                     requestConfig["pin"] = pin;
                 }
                 requestConfig["url"] = requestConfig["url"].ToString().Replace("https://aka.ms/vcrequest?", "https://draft.azure-api.net/api/client/v1.0/request?");
@@ -226,20 +120,20 @@ namespace client_api_test_service_dotnet
         [HttpPost]
         public async Task<ActionResult> issuanceCallback()
         {
+            TraceHttpRequest();
             try {
-                Console.WriteLine("issuanceCallback");
+                _log.LogTrace("issuanceCallback");
                 string body = GetRequestBody();
-                Console.WriteLine(body);
+                _log.LogTrace(body);
                 JObject issuanceResponse = JObject.Parse(body);
                 if (issuanceResponse["message"].ToString() == "request_retrieved") {
                     string requestId = issuanceResponse["requestId"].ToString();
-                    var cacheData = new
-                    {
+                    var cacheData = new {
                         status = 1,
                         message = "QR Code is scanned. Waiting for issuance to complete.",
                         vc = ""
                     };
-                    _cache.Set(requestId, JsonConvert.SerializeObject(cacheData));
+                    CacheJsonObject(requestId, cacheData);
                 }
                 return new OkResult();
             } catch (Exception ex) {
@@ -250,12 +144,12 @@ namespace client_api_test_service_dotnet
         [HttpPost]
         public async Task<ActionResult> response()
         {
+            TraceHttpRequest();
             try {
-                Console.WriteLine("response");
+                _log.LogTrace("response");
                 string body = GetRequestBody();
                 JObject claims = JObject.Parse(body);
-                string state = claims["state"].ToString();
-                _cache.Set(state, body);
+                CacheJsonObject(claims["state"].ToString(), claims);
                 return new OkResult();
             } catch( Exception ex ) {
                 return ReturnErrorMessage( ex.Message );
@@ -264,12 +158,13 @@ namespace client_api_test_service_dotnet
         [HttpPost("/api/issuer/pinCallback/{pin}")]
         public async Task<ActionResult> pinCallback(string pin)
         {
+            TraceHttpRequest();
             try {
-                Console.WriteLine("pinCallback/{0}", pin);
+                _log.LogTrace("pinCallback/{0}", pin);
                 if (string.IsNullOrEmpty(pin)) {
                     return ReturnErrorMessage("Missing argument 'pin' in body");
                 }
-                _cache.Set(pin, true.ToString() );
+                CacheValue(pin, true.ToString() );
                 return new OkResult();
             } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
@@ -278,18 +173,19 @@ namespace client_api_test_service_dotnet
         [HttpGet("/api/issuer/checkCallback/{pin}")]
         public async Task<ActionResult> checkCallback(string pin)
         {
+            TraceHttpRequest();
             try  {
-                Console.WriteLine("checkCallback/{0}", pin);
+                _log.LogTrace("checkCallback/{0}", pin);
                 if (string.IsNullOrEmpty(pin)) {
                     return ReturnErrorMessage("Missing argument 'pin'");
                 }
                 string buf = "false";
-                if (!_cache.TryGetValue(pin, out buf))
+                if ( !GetCachedValue(pin, out buf))
                     buf = "false";
                 bool wasCallbackHit = false;
                 bool.TryParse(buf, out wasCallbackHit);
                 if ( wasCallbackHit ) {
-                    _cache.Remove(pin);
+                    RemoveCacheValue(pin);
                     return new ContentResult { ContentType = "text/plain", Content = pin };
                 } else {
                     return ReturnErrorMessage("callback url was not hit yet for specific request: " + pin);
@@ -298,28 +194,27 @@ namespace client_api_test_service_dotnet
                 return ReturnErrorMessage(ex.Message);
             }
         }
-        [HttpGet]
+        [HttpGet("/api/issuer/issue-response")]
         public async Task<ActionResult> issuanceResponse()
         {
-            try{
+            TraceHttpRequest();
+            try {
                 string state = this.Request.Query["id"];
                 if (string.IsNullOrEmpty(state)) {
                     return ReturnErrorMessage("Missing argument 'id'");
                 }
                 string body = null;
-                if (_cache.TryGetValue(state, out body)) {
-                    _cache.Remove(state);
+                if ( GetCachedValue(state, out body)) {
+                    RemoveCacheValue(state);
                     return ReturnJson(body);
                 } else {
-                    //return ReturnErrorMessage( "No claims for state: " + state );
                     string requestId = this.Request.Query["requestId"];
                     if (!string.IsNullOrEmpty(requestId) && _cache.TryGetValue(requestId, out body)) {
-                        _cache.Remove(requestId);
+                        RemoveCacheValue(requestId);
                         return ReturnJson(body);
                     }
                 }
                 return new OkResult();
-                //return ReturnJson(JsonConvert.SerializeObject(info));
             } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
             }

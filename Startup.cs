@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,22 @@ namespace client_api_test_service_dotnet
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews();
+
+            /*
+            services.AddLogging(config =>
+            {
+                config.AddDebug();
+                config.AddConsole();
+                //etc
+            });
+            */
+            services.AddCors(o => o.AddPolicy("MyPolicy", builder =>
+            {
+                builder.AllowAnyOrigin()
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
+            }));
+
             services.Configure<AppSettingsModel>(Configuration.GetSection("AppSettings"));
             // If using Kestrel:
             services.Configure<KestrelServerOptions>(options =>
@@ -42,7 +59,7 @@ namespace client_api_test_service_dotnet
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
+            if ( env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -58,6 +75,7 @@ namespace client_api_test_service_dotnet
             }
             app.UseDefaultFiles();
             app.UseStaticFiles();
+            app.UseCors("MyPolicy");
             app.UseRouting();
             app.UseAuthorization();
             app.UseEndpoints(endpoints =>

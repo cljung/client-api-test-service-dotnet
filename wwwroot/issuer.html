@@ -46,7 +46,7 @@
 
                         var respIssuanceReq = null;
                         signIn.addEventListener('click', () => {
-                            fetch('api/issuer/issuanceReference')
+                            fetch('api/issuer/issue-request')
                                 .then(response => response.text())
                                 .catch(error => document.getElementById("message").innerHTML = error)
                                 .then(response => {
@@ -62,7 +62,7 @@
                                 })
 
                             var checkStatus = setInterval(function () {
-                                fetch('api/issuer/issuanceResponse?id=' + respIssuanceReq.id + "&requestId=" + respIssuanceReq.requestId)
+                                fetch('api/issuer/issue-response?id=' + respIssuanceReq.id + "&requestId=" + respIssuanceReq.requestId)
                                     .then(response => response.text())
                                     .catch(error => document.getElementById("message").innerHTML = error)
                                     .then(response => {

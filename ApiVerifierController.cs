@@ -13,139 +13,20 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using client_api_test_service_dotnet.Models;
+using Microsoft.Extensions.Logging;
 
 namespace client_api_test_service_dotnet
 {
     [Route("api/verifier/[action]")]
     [ApiController]
-    public class ApiVerifierController : ControllerBase
+    public class ApiVerifierController : ApiBaseVCController
     {
-        private IMemoryCache _cache;
-        private readonly IHostingEnvironment _env;
-        private readonly AppSettingsModel AppSettings;
+        protected const string PresentationRequestConfigFile = "presentation_request_config.json";
 
-        private const string PresentationRequestConfigFile = "presentation_request_config.json";
-
-        public ApiVerifierController(IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IHostingEnvironment env)
-        {
-            this.AppSettings = appSettings.Value;
-            _cache = memoryCache;
-            _env = env;
+        public ApiVerifierController(IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiVerifierController> log) : base(appSettings, memoryCache, env, log)
+        {            
         }
 
-        /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        /// Helpers
-        /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-        private string GetRequestHostName()
-        {
-            string scheme = "https";// : this.Request.Scheme;
-            string originalHost = this.Request.Headers["x-original-host"];
-            string hostname = "";
-            if (!string.IsNullOrEmpty(originalHost))
-                 hostname = string.Format("{0}://{1}", scheme, originalHost);
-            else hostname = string.Format("{0}://{1}", scheme, this.Request.Host);
-            return hostname;
-        }
-        private string GetApiPath()
-        {
-            return string.Format("{0}/api/verifier", GetRequestHostName());
-        }
-        // return 400 error-message
-        private ActionResult ReturnErrorMessage(string errorMessage)
-        {
-            return BadRequest(new { error = "400", error_description = errorMessage });
-        }
-        // return 200 json 
-        private ActionResult ReturnJson( string json )
-        {
-            return new ContentResult { ContentType = "application/json", Content = json };
-        }
-        private ActionResult ReturnErrorB2C(string message)
-        {
-            var msg = new
-            {
-                version = "1.0.0", status = 400, userMessage = message
-            };
-            return new ContentResult { StatusCode = 409, ContentType = "application/json", Content = JsonConvert.SerializeObject(msg) };
-        }
-        // read & cache the file
-        private string ReadFile(string filename)
-        {
-            string json = null;
-            string path = Path.Combine(_env.WebRootPath, filename);
-            if (!_cache.TryGetValue(path, out json)) {
-                if (System.IO.File.Exists(path)) {
-                    json = System.IO.File.ReadAllText(path);
-                    _cache.Set(path, json);
-                }
-            }
-            return json;
-        }
-        // read and return a file
-        private ActionResult SendStaticJsonFile(string filename)
-        {
-            string json = ReadFile(filename);
-            if (!string.IsNullOrEmpty(json)) {
-                return ReturnJson( json );
-            } else {
-                return ReturnErrorMessage( filename + " not found" );
-            }
-        }
-
-        // set a cookie
-        private bool HttpPost(string body, out HttpStatusCode statusCode, out string response)
-        {
-            response = null;
-            HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Add("x-ms-functions-key", this.AppSettings.ApiKey);
-            HttpResponseMessage res = client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json")).Result;
-            response = res.Content.ReadAsStringAsync().Result;
-            client.Dispose();
-            statusCode = res.StatusCode;
-            return res.IsSuccessStatusCode;
-        }
-        private bool HttpGet(string url, out HttpStatusCode statusCode, out string response)
-        {
-            response = null;
-            HttpClient client = new HttpClient();
-            HttpResponseMessage res = client.GetAsync( url ).Result;
-            response = res.Content.ReadAsStringAsync().Result;
-            client.Dispose();
-            statusCode = res.StatusCode;
-            return res.IsSuccessStatusCode;
-        }
-
-        private string GetRequestBody()
-        {
-            return new System.IO.StreamReader(this.Request.Body).ReadToEndAsync().Result;
-            /*
-            string body = null;
-            using (var reader = new System.IO.StreamReader(this.Request.Body)) {
-                body = reader.ReadToEnd();
-            }
-            return body;
-            */
-        }
-
-        private JObject JWTTokenToJObject( string token )
-        {
-            string[] parts = token.Split(".");
-            parts[1] = parts[1].PadRight(4 * ((parts[1].Length + 3) / 4), '=');
-            return JObject.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(parts[1])));
-        }
-
-        private string GetDidManifest()
-        {
-            string contents = null;
-            if (!_cache.TryGetValue("manifest", out contents)) {
-                HttpStatusCode statusCode = HttpStatusCode.OK;
-                if (HttpGet(AppSettings.manifest, out statusCode, out contents)) {
-                    _cache.Set("manifest", contents);
-                }
-            }
-            return contents;
-        }
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// REST APIs
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -153,10 +34,11 @@ namespace client_api_test_service_dotnet
         [HttpGet]
         public async Task<ActionResult> echo()
         {
-            try {
+            TraceHttpRequest();
+            try
+            {
                 JObject manifest = JObject.Parse(GetDidManifest());
-                var info = new
-                {
+                var info = new {
                     date = DateTime.Now.ToString(),
                     host = GetRequestHostName(),
                     api = GetApiPath(),
@@ -177,12 +59,14 @@ namespace client_api_test_service_dotnet
         [Route("/logo.png")]
         public async Task<ActionResult> logo()
         {
+            TraceHttpRequest();
             return Redirect(AppSettings.client_logo_uri);
         }
 
         [HttpGet]
         public async Task<ActionResult> presentation()
         {
+            TraceHttpRequest();
             try {
                 return SendStaticJsonFile(PresentationRequestConfigFile);
             } catch (Exception ex) {
@@ -193,6 +77,7 @@ namespace client_api_test_service_dotnet
         [HttpGet("/api/verifier/presentation-request")]
         public async Task<ActionResult> presentationReference()
         {
+            TraceHttpRequest();
             try {
                 string jsonString = ReadFile(PresentationRequestConfigFile);
                 if (string.IsNullOrEmpty(jsonString)) {
@@ -236,19 +121,22 @@ namespace client_api_test_service_dotnet
         [HttpPost]
         public async Task<ActionResult> presentationCallback()
         {
+            TraceHttpRequest();
             try {
                 string body = GetRequestBody();
+                _log.LogTrace(body);
                 JObject presentationResponse = JObject.Parse(body);
                 if (presentationResponse["message"].ToString() == "request_retrieved") {
+                    _log.LogTrace("presentationCallback() - request_retrieved");
                     string requestId = presentationResponse["requestId"].ToString();
                     var cacheData = new {
                         status = 1,
-                        message = "QR Code is scanned. Waiting for validation...",
-                        vc = ""
+                        message = "QR Code is scanned. Waiting for validation..."
                     };
-                    _cache.Set(requestId, JsonConvert.SerializeObject(cacheData), DateTimeOffset.Now.AddSeconds(this.AppSettings.CacheExpiresInSeconds));
+                    CacheJsonObject(requestId, cacheData);
                 }
                 if (presentationResponse["message"].ToString() == "presentation_verified") {
+                    _log.LogTrace("presentationCallback() - presentation_verified");
                     var presentationPath = presentationResponse["presentationReceipt"]["presentation_submission"]["descriptor_map"][0]["path"].ToString();
                     JObject presentation = JWTTokenToJObject( presentationResponse["presentationReceipt"].SelectToken(presentationPath).ToString() );
                     string vcToken = presentation["vp"]["verifiableCredential"][0].ToString();
@@ -259,69 +147,69 @@ namespace client_api_test_service_dotnet
                         vc = vcToken
                     };
                     string state = presentationResponse["state"].ToString();
-                    _cache.Set(state, JsonConvert.SerializeObject(cacheData), DateTimeOffset.Now.AddSeconds( this.AppSettings.CacheExpiresInSeconds) );
+                    CacheJsonObject(state, cacheData );
                 }
                 return new OkResult();
             } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
             }
         }
-
         [HttpGet("/api/verifier/presentation-response")]
         public async Task<ActionResult> presentationResponse()
         {
+            TraceHttpRequest();
             try {
                 string state = this.Request.Query["id"];
                 if (string.IsNullOrEmpty(state)) {
                     return ReturnErrorMessage("Missing argument 'id'");
                 }
-                string body = null;
-                if (_cache.TryGetValue( state, out body)) {
-                    //_cache.Remove( state ); // if you're not using B2C integration, uncomment this line
-                    return ReturnJson( TransformCacheDataToBrowserResponse( body ) );
+                JObject cacheData = null;
+                if ( GetCachedJsonObject( state, out cacheData )) { 
+                    _log.LogTrace("Have VC validation result");
+                    //RemoveCacheValue( state ); // if you're not using B2C integration, uncomment this line
+                    return ReturnJson(TransformCacheDataToBrowserResponse(cacheData));
                 } else {
-                    //return ReturnErrorMessage( "No claims for state: " + state );
                     string requestId = this.Request.Query["requestId"];
-                    if (!string.IsNullOrEmpty(requestId) && _cache.TryGetValue(requestId, out body)) {
-                        _cache.Remove(requestId);
-                        return ReturnJson( TransformCacheDataToBrowserResponse( body ) );
+                    if (!string.IsNullOrEmpty(requestId) && GetCachedJsonObject( requestId, out cacheData) ) {
+                        _log.LogTrace("Have 1st callback");
+                        RemoveCacheValue(requestId);
+                        return ReturnJson(TransformCacheDataToBrowserResponse(cacheData));
                     }
                 }
                 return new OkResult();
-                //return ReturnJson(JsonConvert.SerializeObject(info));
             } catch (Exception ex) {
                 return ReturnErrorMessage( ex.Message );
             }
         }
 
-        private string TransformCacheDataToBrowserResponse( string cacheData )
+        private string TransformCacheDataToBrowserResponse( JObject cacheData )
         {
             // we do this not to give all the cacheData to the browser
-            var json = JObject.Parse(cacheData);
-            var browserData = new
-            {
-                status = json["status"],
-                message = json["message"]
+            var browserData = new {
+                status = cacheData["status"],
+                message = cacheData["message"]
             };
             return JsonConvert.SerializeObject(browserData);
         }
-        [HttpPost]
+        [HttpPost("/api/verifier/presentation-response-b2c")]
+
         public async Task<ActionResult> presentationResponseB2C()
         {
-            try
-            {
+            TraceHttpRequest();
+            try {
                 string body = GetRequestBody();
+                _log.LogTrace(body);
                 JObject presentationResponse = JObject.Parse(body);
                 string state = presentationResponse["id"].ToString();
                 if (string.IsNullOrEmpty(state)) {
                     return ReturnErrorMessage("Missing argument 'id'");
                 }
-                if ( !_cache.TryGetValue(state, out body)) {
+                JObject cacheData = null;
+                if ( !GetCachedJsonObject( state, out cacheData )) { 
                     return ReturnErrorB2C("Verifiable Credentials not presented"); // 409
                 }
                 // remove cache data now, because if we crash, we don't want to get into an infinite loop of crashing 
-                _cache.Remove(state);
-                var cacheData = JObject.Parse(body);                
+                RemoveCacheValue(state);
                 JObject vc = JWTTokenToJObject( cacheData["vc"].ToString() );
                 // these claims are optional
                 string sub = null;
@@ -347,10 +235,10 @@ namespace client_api_test_service_dotnet
                     tid = tid,
                     username = username
                 };
-                return ReturnJson(JsonConvert.SerializeObject(b2cResponse));
-            }
-            catch (Exception ex)
-            {
+                string resp = JsonConvert.SerializeObject(b2cResponse);
+                _log.LogTrace(resp);
+                return ReturnJson( resp );
+            } catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
             }
         }
