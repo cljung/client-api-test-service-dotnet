@@ -10,7 +10,7 @@ This sample can work in two ways:
 
 Initially, Microsoft provided a node.js SDK for building Verifiable Credentials applications. Going forward, it will be replaced by an API, since an API makes implementation easier and language agnostic. Instead of understanding the various functions in the SDK, you only have to understand how to format JSON structures for issuing or verifying VCs and call the VC Client API. 
 
-![API Overview][media/api-overview.png]
+![API Overview](media/api-overview.png)
 
 ## Issuance
 
@@ -185,7 +185,7 @@ Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Bro
 ### Together with Azure AD B2C
 To use this sample together with Azure AD B2C, you first needs to build it, which means follow the steps above. 
 
-![API Overview][media/api-b2c-overview.png]
+![API Overview](media/api-b2c-overview.png)
 
 Then you need to deploy B2C Custom Policies that has configuration to add Verifiable Credentials as a Claims Provider and to integrate with this DotNet API. This, you will find in the github repo [https://github.com/cljung/b2c-vc-signin](https://github.com/cljung/b2c-vc-signin). That repo has a node.js issuer/verifier WebApp that uses the VC SDK, but you can skip the `vc` directory and only work with what is in the `b2c` directory. In the instructions on how to edit the B2C policies, it is mentioned that you need to update the `VCServiceUrl` and the `ServiceUrl` to point to your API. That means you need to update it with your `ngrok` url you got when you started the DotNet API in this sample. Otherwise, follow the instructions in [https://github.com/cljung/b2c-vc-signin/blob/main/b2c/README.md](https://github.com/cljung/b2c-vc-signin/blob/main/b2c/README.md) and deploy the B2C Custom Policies
 
