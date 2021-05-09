@@ -46,10 +46,6 @@ namespace client_api_test_service_dotnet
             else hostname = string.Format("{0}://{1}", scheme, this.Request.Host);
             return hostname;
         }
-        protected string GetApiPath()
-        {
-            return string.Format("{0}/api/verifier", GetRequestHostName());
-        }
         // return 400 error-message
         protected ActionResult ReturnErrorMessage(string errorMessage)
         {
