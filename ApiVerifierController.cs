@@ -36,8 +36,7 @@ namespace client_api_test_service_dotnet
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         [HttpGet]
-        public async Task<ActionResult> echo()
-        {
+        public async Task<ActionResult> echo() {
             TraceHttpRequest();
             try
             {
@@ -61,15 +60,13 @@ namespace client_api_test_service_dotnet
         }
         [HttpGet]
         [Route("/logo.png")]
-        public async Task<ActionResult> logo()
-        {
+        public async Task<ActionResult> logo() {
             TraceHttpRequest();
             return Redirect(AppSettings.client_logo_uri);
         }
 
         [HttpGet]
-        public async Task<ActionResult> presentation()
-        {
+        public async Task<ActionResult> presentation() {
             TraceHttpRequest();
             try {
                 return SendStaticJsonFile(PresentationRequestConfigFile);
@@ -79,8 +76,7 @@ namespace client_api_test_service_dotnet
         }
 
         [HttpGet("/api/verifier/presentation-request")]
-        public async Task<ActionResult> presentationReference()
-        {
+        public async Task<ActionResult> presentationReference() {
             TraceHttpRequest();
             try {
                 string jsonString = ReadFile(PresentationRequestConfigFile);
@@ -111,7 +107,7 @@ namespace client_api_test_service_dotnet
                     return ReturnErrorMessage( contents );
                 }
                 JObject apiResp = JObject.Parse(contents);
-                //  iOS Authenticator doesn't allow redirects
+                //  iOS Authenticator doesn't allow redirects - if you set UsaAkaMS == true in appsettings.json, you don't need this
                 apiResp["url"] = apiResp["url"].ToString().Replace("https://aka.ms/vcrequest?", "https://draft.azure-api.net/api/client/v1.0/request?");
                 apiResp.Add(new JProperty("id", state));
                 apiResp.Add(new JProperty("link", apiResp["url"].ToString()));
@@ -123,8 +119,7 @@ namespace client_api_test_service_dotnet
         }
 
         [HttpPost]
-        public async Task<ActionResult> presentationCallback()
-        {
+        public async Task<ActionResult> presentationCallback() {
             TraceHttpRequest();
             try {
                 string body = GetRequestBody();
@@ -159,8 +154,7 @@ namespace client_api_test_service_dotnet
             }
         }
         [HttpGet("/api/verifier/presentation-response")]
-        public async Task<ActionResult> presentationResponse()
-        {
+        public async Task<ActionResult> presentationResponse() {
             TraceHttpRequest();
             try {
                 string state = this.Request.Query["id"];
@@ -186,8 +180,7 @@ namespace client_api_test_service_dotnet
             }
         }
 
-        private string TransformCacheDataToBrowserResponse( JObject cacheData )
-        {
+        private string TransformCacheDataToBrowserResponse( JObject cacheData ) {
             // we do this not to give all the cacheData to the browser
             var browserData = new {
                 status = cacheData["status"],
@@ -196,9 +189,7 @@ namespace client_api_test_service_dotnet
             return JsonConvert.SerializeObject(browserData);
         }
         [HttpPost("/api/verifier/presentation-response-b2c")]
-
-        public async Task<ActionResult> presentationResponseB2C()
-        {
+        public async Task<ActionResult> presentationResponseB2C() {
             TraceHttpRequest();
             try {
                 string body = GetRequestBody();

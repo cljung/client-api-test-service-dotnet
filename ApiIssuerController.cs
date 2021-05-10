@@ -36,8 +36,7 @@ namespace client_api_test_service_dotnet
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         [HttpGet]
-        public async Task<ActionResult> echo()
-        {
+        public async Task<ActionResult> echo() {
             TraceHttpRequest();
             try {
                 JObject manifest = JObject.Parse(GetDidManifest());
@@ -60,8 +59,7 @@ namespace client_api_test_service_dotnet
         }
 
         [HttpGet]
-        public async Task<ActionResult> issuance()
-        {
+        public async Task<ActionResult> issuance() {
             TraceHttpRequest();
             try {
                 return SendStaticJsonFile(IssuanceRequestConfigFile);
@@ -70,8 +68,7 @@ namespace client_api_test_service_dotnet
             }
         }
         [HttpGet("/api/issuer/issue-request")]
-        public async Task<ActionResult> issuanceReference()
-        {
+        public async Task<ActionResult> issuanceReference() {
             TraceHttpRequest();
             try {
                 string jsonString = ReadFile(IssuanceRequestConfigFile);
@@ -112,8 +109,10 @@ namespace client_api_test_service_dotnet
                 if (this.AppSettings.PinCodeLength > 0) {
                     requestConfig["pin"] = pin;
                 }
+                //  iOS Authenticator doesn't allow redirects - if you set UsaAkaMS == true in appsettings.json, you don't need this
                 requestConfig["url"] = requestConfig["url"].ToString().Replace("https://aka.ms/vcrequest?", "https://draft.azure-api.net/api/client/v1.0/request?");
                 requestConfig.Add(new JProperty("id", state));
+                requestConfig.Add(new JProperty("link", requestConfig["url"].ToString()));
                 jsonString = JsonConvert.SerializeObject(requestConfig);
                 return ReturnJson( jsonString );
             }  catch (Exception ex)  {
@@ -122,8 +121,7 @@ namespace client_api_test_service_dotnet
         }
 
         [HttpPost]
-        public async Task<ActionResult> issuanceCallback()
-        {
+        public async Task<ActionResult> issuanceCallback() {
             TraceHttpRequest();
             try {
                 _log.LogTrace("issuanceCallback");
@@ -146,8 +144,7 @@ namespace client_api_test_service_dotnet
         }
 
         [HttpPost]
-        public async Task<ActionResult> response()
-        {
+        public async Task<ActionResult> response() {
             TraceHttpRequest();
             try {
                 _log.LogTrace("response");
@@ -159,48 +156,9 @@ namespace client_api_test_service_dotnet
                 return ReturnErrorMessage( ex.Message );
             }
         }
-        [HttpPost("/api/issuer/pinCallback/{pin}")]
-        public async Task<ActionResult> pinCallback(string pin)
-        {
-            TraceHttpRequest();
-            try {
-                _log.LogTrace("pinCallback/{0}", pin);
-                if (string.IsNullOrEmpty(pin)) {
-                    return ReturnErrorMessage("Missing argument 'pin' in body");
-                }
-                CacheValue(pin, true.ToString() );
-                return new OkResult();
-            } catch (Exception ex) {
-                return ReturnErrorMessage(ex.Message);
-            }
-        }
-        [HttpGet("/api/issuer/checkCallback/{pin}")]
-        public async Task<ActionResult> checkCallback(string pin)
-        {
-            TraceHttpRequest();
-            try  {
-                _log.LogTrace("checkCallback/{0}", pin);
-                if (string.IsNullOrEmpty(pin)) {
-                    return ReturnErrorMessage("Missing argument 'pin'");
-                }
-                string buf = "false";
-                if ( !GetCachedValue(pin, out buf))
-                    buf = "false";
-                bool wasCallbackHit = false;
-                bool.TryParse(buf, out wasCallbackHit);
-                if ( wasCallbackHit ) {
-                    RemoveCacheValue(pin);
-                    return new ContentResult { ContentType = "text/plain", Content = pin };
-                } else {
-                    return ReturnErrorMessage("callback url was not hit yet for specific request: " + pin);
-                }
-            } catch (Exception ex) {
-                return ReturnErrorMessage(ex.Message);
-            }
-        }
+
         [HttpGet("/api/issuer/issue-response")]
-        public async Task<ActionResult> issuanceResponse()
-        {
+        public async Task<ActionResult> issuanceResponse() {
             TraceHttpRequest();
             try {
                 string state = this.Request.Query["id"];

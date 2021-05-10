@@ -28,14 +28,6 @@ namespace client_api_test_service_dotnet
         {
             services.AddControllersWithViews();
 
-            /*
-            services.AddLogging(config =>
-            {
-                config.AddDebug();
-                config.AddConsole();
-                //etc
-            });
-            */
             services.AddCors(o => o.AddPolicy("MyPolicy", builder =>
             {
                 builder.AllowAnyOrigin()

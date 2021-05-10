@@ -36,8 +36,7 @@ namespace client_api_test_service_dotnet
         /// Helpers
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-        protected string GetRequestHostName()
-        {
+        protected string GetRequestHostName() {
             string scheme = "https";// : this.Request.Scheme;
             string originalHost = this.Request.Headers["x-original-host"];
             string hostname = "";
@@ -47,26 +46,21 @@ namespace client_api_test_service_dotnet
             return hostname;
         }
         // return 400 error-message
-        protected ActionResult ReturnErrorMessage(string errorMessage)
-        {
+        protected ActionResult ReturnErrorMessage(string errorMessage) {
             return BadRequest(new { error = "400", error_description = errorMessage });
         }
         // return 200 json 
-        protected ActionResult ReturnJson( string json )
-        {
+        protected ActionResult ReturnJson( string json ) {
             return new ContentResult { ContentType = "application/json", Content = json };
         }
-        protected ActionResult ReturnErrorB2C(string message)
-        {
-            var msg = new
-            {
+        protected ActionResult ReturnErrorB2C(string message) {
+            var msg = new {
                 version = "1.0.0", status = 400, userMessage = message
             };
             return new ContentResult { StatusCode = 409, ContentType = "application/json", Content = JsonConvert.SerializeObject(msg) };
         }
         // read & cache the file
-        protected string ReadFile(string filename)
-        {
+        protected string ReadFile(string filename) {
             string json = null;
             string path = Path.Combine(_env.WebRootPath, filename);
             if (!_cache.TryGetValue(path, out json)) {
@@ -78,8 +72,7 @@ namespace client_api_test_service_dotnet
             return json;
         }
         // read and return a file
-        protected ActionResult SendStaticJsonFile(string filename)
-        {
+        protected ActionResult SendStaticJsonFile(string filename) {
             string json = ReadFile(filename);
             if (!string.IsNullOrEmpty(json)) {
                 return ReturnJson( json );
@@ -89,19 +82,20 @@ namespace client_api_test_service_dotnet
         }
 
         // set a cookie
-        protected bool HttpPost(string body, out HttpStatusCode statusCode, out string response)
-        {
+        protected bool HttpPost(string body, out HttpStatusCode statusCode, out string response) {
             response = null;
             HttpClient client = new HttpClient();
             client.DefaultRequestHeaders.Add("x-ms-functions-key", this.AppSettings.ApiKey);
+            if ( !string.IsNullOrEmpty(this.AppSettings.UseAkaMs) ) {
+                client.DefaultRequestHeaders.Add("x-forwarded-useaka", this.AppSettings.UseAkaMs.ToString().ToLowerInvariant());
+            }
             HttpResponseMessage res = client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json")).Result;
             response = res.Content.ReadAsStringAsync().Result;
             client.Dispose();
             statusCode = res.StatusCode;
             return res.IsSuccessStatusCode;
         }
-        protected bool HttpGet(string url, out HttpStatusCode statusCode, out string response)
-        {
+        protected bool HttpGet(string url, out HttpStatusCode statusCode, out string response) {
             response = null;
             HttpClient client = new HttpClient();
             HttpResponseMessage res = client.GetAsync( url ).Result;
@@ -111,8 +105,7 @@ namespace client_api_test_service_dotnet
             return res.IsSuccessStatusCode;
         }
 
-        protected void TraceHttpRequest()
-        {
+        protected void TraceHttpRequest() {
             string ipaddr = "";
             string xForwardedFor = this.Request.Headers["X-Forwarded-For"];
             if (!string.IsNullOrEmpty(xForwardedFor))
@@ -121,20 +114,17 @@ namespace client_api_test_service_dotnet
             _log.LogTrace("{0} {1} -> {2} {3}://{4}{5}{6}", DateTime.UtcNow.ToString("o"), ipaddr
                     , this.Request.Method, this.Request.Scheme, this.Request.Host, this.Request.Path, this.Request.QueryString );
         }
-        protected string GetRequestBody()
-        {
+        protected string GetRequestBody() {
             return new System.IO.StreamReader(this.Request.Body).ReadToEndAsync().Result;
         }
 
-        protected JObject JWTTokenToJObject( string token )
-        {
+        protected JObject JWTTokenToJObject( string token ) {
             string[] parts = token.Split(".");
             parts[1] = parts[1].PadRight(4 * ((parts[1].Length + 3) / 4), '=');
             return JObject.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(parts[1])));
         }
 
-        protected string GetDidManifest()
-        {
+        protected string GetDidManifest() {
             string contents = null;
             if (!_cache.TryGetValue("manifest", out contents)) {
                 HttpStatusCode statusCode = HttpStatusCode.OK;
@@ -145,12 +135,10 @@ namespace client_api_test_service_dotnet
             return contents;
         }
 
-        protected bool GetCachedValue(string key, out string value)
-        {
+        protected bool GetCachedValue(string key, out string value) {
             return _cache.TryGetValue(key, out value);
         }
-        protected bool GetCachedJsonObject(string key, out JObject value)
-        {
+        protected bool GetCachedJsonObject(string key, out JObject value) {
             value = null;
             if ( !_cache.TryGetValue(key, out string buf) ) {
                 return false;
@@ -159,16 +147,13 @@ namespace client_api_test_service_dotnet
                 return true;
             }
         }
-        protected void CacheJsonObject( string key, object jsonObject )
-        {
+        protected void CacheJsonObject( string key, object jsonObject ) {
             _cache.Set( key, JsonConvert.SerializeObject(jsonObject), DateTimeOffset.Now.AddSeconds(this.AppSettings.CacheExpiresInSeconds));
         }
-        protected void CacheValue(string key, string value)
-        {
+        protected void CacheValue(string key, string value) {
             _cache.Set(key, value, DateTimeOffset.Now.AddSeconds(this.AppSettings.CacheExpiresInSeconds));
         }
-        protected void RemoveCacheValue( string key )
-        {
+        protected void RemoveCacheValue( string key ) {
             _cache.Remove(key);
         }
     } // cls

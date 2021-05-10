@@ -52,7 +52,7 @@ To call the VC Client API to start the issuance process, the DotNet API creates 
 - **issuance.callback** - a callback endpoint in your DotNet API. The VC Client API will call this endpoint when the issuance is completed.
 - **issuance.nonce** - The random value to prevent replay attacks
 - **issuance.state** - A state value you provide so you can correlate this request when you get callback confirmation
-- **issuance.pin** - If you want to require a pin code in the Microsoft Authenticator for this issuance request. This can be useful if it is a self issuing situation where there is no possibility of asking the user to prove their identity via a login. If you don't want to use the pin functionality, you should not have the pin section in the JSON structure.
+- **issuance.pin** - If you want to require a pin code in the Microsoft Authenticator for this issuance request. This can be useful if it is a self issuing situation where there is no possibility of asking the user to prove their identity via a login. If you don't want to use the pin functionality, you should not have the pin section in the JSON structure. The appsettings.PinCode.json contains a settings for issuing with pin code.
 - **issuance.claims** - optional, extra claims you want to include in the VC.
 
 In the response message from the VC Client API, it will include it's own callback url, which means that once the Microsoft Authenticator has scanned the QR code, it will contact the VC Client API directly and not your DotNet API. The DotNet API will get confirmation via the callback.
@@ -99,7 +99,9 @@ To call the VC Client API to start the verification process, the DotNet API crea
 Much of the data is the same in this JSON structure, but some differences needs explaining.
 
 - **authority** vs **trustedIssuers** - The Verifier and the Issuer may be two different entities. For example, the Verifier might be a online service, like a car rental service, while the DID it is asking for is the issuing entity forr drivers licenses. Note that `trustedIssuers` is a collection of DIDs, which means you can ask for multiple VCs from the user
+- **presentation** - required for a Verification request. Note that `issuance` and `presentation` are mutually exclusive. You can't send both.
 - **requestedCredentials** - please also note that the `requestedCredentials` is a collection too, which means you can ask to create a presentation request that contains multiple DIDs.
+- **includeReceipt** - if set to true, the `presentation_verified` callback will contain the `presentationReceipt` element.
 
 ### Verification Callback
 
@@ -220,7 +222,7 @@ The configuration you have in the `appsettings.json` file determinds which Crede
     }
   },
   "AllowedHosts": "*",
-  "AppSettings.Expert": {
+  "AppSettings": {
     "ApiEndpoint": "https://draft.azure-api.net/xyz/api/client/v1.0/request",
     "ApiKey": "MyApiKey",
     "CookieKey": "state",
@@ -238,3 +240,9 @@ The configuration you have in the `appsettings.json` file determinds which Crede
   }
 }
 ``` 
+
+### LogLevel Trace
+
+If you set the LogLevel to `Trace` in the appsettings.*.json file, then the DotNet sample will output all HTTP requests, which will make it convenient for you to study the interaction between components.
+
+![API Overview](media/loglevel-trace.png)
