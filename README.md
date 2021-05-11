@@ -210,8 +210,15 @@ Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Bro
 
 ## appsettings.json
 
-The configuration you have in the `appsettings.json` file determinds which CredentialType you will be using. If you want to use your own credentials, you need to update this file. The appsettings.Development.json contains settings that work with a dev/test B2C credential.
-In order to make it easy to shift between different configurations, the `AppSettings:ActiveCredentialType` points to which setting in appsetting.json that should be used. This way you can have multiple configurations, just change one line and then restart to test a new Verifiable Credential.
+The configuration you have in the `appsettings.json` file determinds which CredentialType you will be using. If you want to use your own credentials, you need to update this file. In order to make it easy to shift between different configurations, the `AppSettings:ActiveCredentialType` points to which setting in appsetting.json that should be used. This way you can have multiple configurations, just change one line and then restart to test a new Verifiable Credential.
+
+The available settings in the repo are:
+
+- **AppSettings.VerifiedCredentialExpert** - The sample VC from docs.microsoft.com
+- **AppSettings.Cljungdemob2cMembership** - References my VC which issues from my test Azure AD B2C tenant 
+- **AppSettings.FawltyTowers2Employee** - References my VC which issues from my test Azure AD Premium tenant
+- **AppSettings.PinCode** - References a VC where you only need a pin code to issue yourself a VC
+
 ```JSON
 {
   "Logging": {
