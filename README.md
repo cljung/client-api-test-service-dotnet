@@ -98,7 +98,7 @@ To call the VC Client API to start the verification process, the DotNet API crea
 
 Much of the data is the same in this JSON structure, but some differences needs explaining.
 
-- **authority** vs **trustedIssuers** - The Verifier and the Issuer may be two different entities. For example, the Verifier might be a online service, like a car rental service, while the DID it is asking for is the issuing entity forr drivers licenses. Note that `trustedIssuers` is a collection of DIDs, which means you can ask for multiple VCs from the user
+- **authority** vs **trustedIssuers** - The Verifier and the Issuer may be two different entities. For example, the Verifier might be a online service, like a car rental service, while the DID it is asking for is the issuing entity for drivers licenses. Note that `trustedIssuers` is a collection of DIDs, which means you can ask for multiple VCs from the user
 - **presentation** - required for a Verification request. Note that `issuance` and `presentation` are mutually exclusive. You can't send both.
 - **requestedCredentials** - please also note that the `requestedCredentials` is a collection too, which means you can ask to create a presentation request that contains multiple DIDs.
 - **includeReceipt** - if set to true, the `presentation_verified` callback will contain the `presentationReceipt` element.
@@ -211,7 +211,7 @@ Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Bro
 ## appsettings.json
 
 The configuration you have in the `appsettings.json` file determinds which CredentialType you will be using. If you want to use your own credentials, you need to update this file. The appsettings.Development.json contains settings that work with a dev/test B2C credential.
- 
+In order to make it easy to shift between different configurations, the `AppSettings:ActiveCredentialType` points to which setting in appsetting.json that should be used. This way you can have multiple configurations, just change one line and then restart to test a new Verifiable Credential.
 ```JSON
 {
   "Logging": {
@@ -223,6 +223,9 @@ The configuration you have in the `appsettings.json` file determinds which Crede
   },
   "AllowedHosts": "*",
   "AppSettings": {
+    "ActiveCredentialType": "AppSettings.VerifiedCredentialExpert"
+  },
+  "AppSettings.VerifiedCredentialExpert": {
     "ApiEndpoint": "https://draft.azure-api.net/xyz/api/client/v1.0/request",
     "ApiKey": "MyApiKey",
     "CookieKey": "state",
@@ -237,6 +240,8 @@ The configuration you have in the `appsettings.json` file determinds which Crede
     "client_logo_uri": "https://didcustomerplayground.blob.core.windows.net/public/VerifiedCredentialExpert_icon.png",
     "client_tos_uri": "https://www.microsoft.com/servicesagreement",
     "client_purpose": "To check if you know how to use verifiable credentials."
+  },
+  "AppSettings.SomeOtherCredentialType": {
   }
 }
 ``` 
