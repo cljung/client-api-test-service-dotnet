@@ -23,7 +23,7 @@ namespace client_api_test_service_dotnet
     {
         private const string IssuanceRequestConfigFile = "issuance_request_config.json";
 
-        public ApiIssuerController(IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiIssuerController> log) : base(appSettings, memoryCache, env, log)
+        public ApiIssuerController(IOptions<AppSettingsModelVC> vcSettings, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiIssuerController> log) : base(vcSettings, appSettings, memoryCache, env, log)
         {
         }
 
@@ -45,12 +45,13 @@ namespace client_api_test_service_dotnet
                     date = DateTime.Now.ToString(),
                     host = GetRequestHostName(),
                     api = GetApiPath(),
-                    didIssuer = AppSettings.didIssuer,
-                    credentialType = AppSettings.credentialType,
-                    client_purpose = AppSettings.client_purpose,
+                    didIssuer = VCSettings.didIssuer,
+                    credentialType = VCSettings.credentialType,
+                    client_purpose = VCSettings.client_purpose,
                     displayCard = manifest["display"]["card"],
                     buttonColor = "#000080",
-                    contract = manifest["display"]["contract"]
+                    contract = manifest["display"]["contract"],
+                    selfAssertedClaims = this.VCSettings.selfAssertedClaims
                 };
                 return ReturnJson(JsonConvert.SerializeObject(info));
             } catch (Exception ex) {
@@ -75,28 +76,41 @@ namespace client_api_test_service_dotnet
                 if ( string.IsNullOrEmpty(jsonString) ) {
                     return ReturnErrorMessage( IssuanceRequestConfigFile + " not found" );
                 }
+                // get self asserted claims, if any
+                JObject selfAssertedClaims = null;
+                if (this.VCSettings.selfAssertedClaims != null && this.VCSettings.selfAssertedClaims.Count > 0) {
+                    selfAssertedClaims = new JObject();
+                    foreach (var c in this.VCSettings.selfAssertedClaims) {
+                        selfAssertedClaims.Add( new JProperty(c.claim, this.Request.Query[c.claim].ToString() ));
+                    }
+                }                
                 string state = Guid.NewGuid().ToString();
                 string nonce = Guid.NewGuid().ToString();
                 JObject config = JObject.Parse(jsonString);
-                config["authority"] = AppSettings.didIssuer;
+                config["authority"] = VCSettings.didIssuer;
                 config["registration"]["clientName"] = AppSettings.client_name;
                 //string urlCallback = string.Format("{0}/issuanceCallback/{1}", GetApiPath(), pin);
                 string urlCallback = string.Format("{0}/issuanceCallback", GetApiPath() );
                 config["issuance"]["callback"] = urlCallback;
                 config["issuance"]["state"] = state;
                 config["issuance"]["nonce"] = nonce;
-                config["issuance"]["type"] = AppSettings.credentialType;
-                config["issuance"]["manifest"] = AppSettings.manifest;
+                config["issuance"]["type"] = VCSettings.credentialType;
+                config["issuance"]["manifest"] = VCSettings.manifest;
                 string pin = null;
-                if (this.AppSettings.PinCodeLength > 0 ) {
-                    int pinMaxValue = int.Parse("".PadRight(this.AppSettings.PinCodeLength, '9'));          // 9999999
+                if (this.VCSettings.PinCodeLength > 0 ) {
+                    int pinMaxValue = int.Parse("".PadRight(this.VCSettings.PinCodeLength, '9'));          // 9999999
                     int randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
-                    pin = string.Format("{0:D" + this.AppSettings.PinCodeLength.ToString() + "}", randomNumber);
+                    pin = string.Format("{0:D" + this.VCSettings.PinCodeLength.ToString() + "}", randomNumber);
                     _log.LogTrace("pin={0}", pin);
                     config["issuance"]["pin"]["value"] = pin;
-                    config["issuance"]["pin"]["length"] = this.AppSettings.PinCodeLength;
+                    config["issuance"]["pin"]["length"] = this.VCSettings.PinCodeLength;
                 } else {
                     (config["issuance"] as JObject).Remove("pin");
+                }
+                if ( selfAssertedClaims != null ) {
+                    config["issuance"]["claims"] = selfAssertedClaims;
+                } else {
+                    (config["issuance"] as JObject).Remove("claims");
                 }
                 jsonString = JsonConvert.SerializeObject(config);
                 _log.LogTrace(jsonString);
@@ -106,7 +120,7 @@ namespace client_api_test_service_dotnet
                     return ReturnErrorMessage( contents );
                 }
                 JObject requestConfig = JObject.Parse(contents);
-                if (this.AppSettings.PinCodeLength > 0) {
+                if (this.VCSettings.PinCodeLength > 0) {
                     requestConfig["pin"] = pin;
                 }
                 //  iOS Authenticator doesn't allow redirects - if you set UsaAkaMS == true in appsettings.json, you don't need this

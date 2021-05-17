@@ -36,8 +36,8 @@ namespace client_api_test_service_dotnet
             }));
 
             string activeSectionName = Configuration.GetValue<string>("AppSettings:ActiveCredentialType");
-
-            services.Configure<AppSettingsModel>(Configuration.GetSection(activeSectionName));
+            services.Configure<AppSettingsModel>(Configuration.GetSection("AppSettings"));
+            services.Configure<AppSettingsModelVC>(Configuration.GetSection(activeSectionName));
             // If using Kestrel:
             services.Configure<KestrelServerOptions>(options =>
             {

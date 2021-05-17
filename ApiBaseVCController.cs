@@ -23,10 +23,12 @@ namespace client_api_test_service_dotnet
         protected readonly IWebHostEnvironment _env;
         protected readonly ILogger<ApiBaseVCController> _log;
         protected readonly AppSettingsModel AppSettings;
+        protected readonly AppSettingsModelVC VCSettings;
 
-        public ApiBaseVCController(IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiBaseVCController> log)
+        public ApiBaseVCController(IOptions<AppSettingsModelVC> vcSettings, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiBaseVCController> log)
         {
             this.AppSettings = appSettings.Value;
+            this.VCSettings = vcSettings.Value;
             _cache = memoryCache;
             _env = env;
             _log = log;
@@ -81,7 +83,7 @@ namespace client_api_test_service_dotnet
             }
         }
 
-        // set a cookie
+        // POST to VC Client API
         protected bool HttpPost(string body, out HttpStatusCode statusCode, out string response) {
             response = null;
             HttpClient client = new HttpClient();
@@ -128,7 +130,7 @@ namespace client_api_test_service_dotnet
             string contents = null;
             if (!_cache.TryGetValue("manifest", out contents)) {
                 HttpStatusCode statusCode = HttpStatusCode.OK;
-                if (HttpGet(AppSettings.manifest, out statusCode, out contents)) {
+                if (HttpGet(this.VCSettings.manifest, out statusCode, out contents)) {
                     _cache.Set("manifest", contents);
                 }
             }

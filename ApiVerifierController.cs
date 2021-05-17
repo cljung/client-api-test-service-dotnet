@@ -23,7 +23,7 @@ namespace client_api_test_service_dotnet
     {
         protected const string PresentationRequestConfigFile = "presentation_request_config.json";
 
-        public ApiVerifierController(IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiVerifierController> log) : base(appSettings, memoryCache, env, log)
+        public ApiVerifierController(IOptions<AppSettingsModelVC> vcSettings, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiVerifierController> log) : base(vcSettings, appSettings, memoryCache, env, log)
         {            
         }
 
@@ -45,10 +45,10 @@ namespace client_api_test_service_dotnet
                     date = DateTime.Now.ToString(),
                     host = GetRequestHostName(),
                     api = GetApiPath(),
-                    didIssuer = AppSettings.didIssuer,
-                    didVerifier = AppSettings.didVerifier,
-                    credentialType = AppSettings.credentialType,
-                    client_purpose = AppSettings.client_purpose,
+                    didIssuer = VCSettings.didIssuer,
+                    didVerifier = VCSettings.didVerifier,
+                    credentialType = VCSettings.credentialType,
+                    client_purpose = VCSettings.client_purpose,
                     displayCard = manifest["display"]["card"],
                     buttonColor = "#000080",
                     contract = manifest["display"]["contract"]
@@ -62,7 +62,7 @@ namespace client_api_test_service_dotnet
         [Route("/logo.png")]
         public async Task<ActionResult> logo() {
             TraceHttpRequest();
-            return Redirect(AppSettings.client_logo_uri);
+            return Redirect(VCSettings.client_logo_uri);
         }
 
         [HttpGet]
@@ -90,16 +90,16 @@ namespace client_api_test_service_dotnet
                 string state = Guid.NewGuid().ToString();
                 string nonce = Guid.NewGuid().ToString();
                 JObject config = JObject.Parse(jsonString);
-                config["authority"] = AppSettings.didVerifier;
+                config["authority"] = VCSettings.didVerifier;
                 config["registration"]["clientName"] = AppSettings.client_name;
-                config["registration"]["logoUrl"] = AppSettings.client_logo_uri;
+                config["registration"]["logoUrl"] = VCSettings.client_logo_uri;
                 config["presentation"]["callback"] = string.Format("{0}/presentationCallback", GetApiPath());
                 config["presentation"]["state"] = state;
                 config["presentation"]["nonce"] = nonce;
-                config["presentation"]["requestedCredentials"][0]["type"] = AppSettings.credentialType;
-                config["presentation"]["requestedCredentials"][0]["manifest"] = AppSettings.manifest;
-                config["presentation"]["requestedCredentials"][0]["purpose"] = AppSettings.client_purpose;
-                config["presentation"]["requestedCredentials"][0]["trustedIssuers"][0] = AppSettings.didIssuer;
+                config["presentation"]["requestedCredentials"][0]["type"] = VCSettings.credentialType;
+                config["presentation"]["requestedCredentials"][0]["manifest"] = VCSettings.manifest;
+                config["presentation"]["requestedCredentials"][0]["purpose"] = VCSettings.client_purpose;
+                config["presentation"]["requestedCredentials"][0]["trustedIssuers"][0] = VCSettings.didIssuer;
                 jsonString = JsonConvert.SerializeObject(config);
                 string contents = "";
                 HttpStatusCode statusCode = HttpStatusCode.OK;
@@ -219,7 +219,7 @@ namespace client_api_test_service_dotnet
                 var b2cResponse = new {
                     id = state,
                     credentialsVerified = true,
-                    credentialType = AppSettings.credentialType,
+                    credentialType = VCSettings.credentialType,
                     displayName = string.Format("{0} {1}", vc["vc"]["credentialSubject"]["firstName"], vc["vc"]["credentialSubject"]["lastName"]),
                     givenName = vc["vc"]["credentialSubject"]["firstName"].ToString(),
                     surName = vc["vc"]["credentialSubject"]["lastName"].ToString(),

@@ -25,7 +25,22 @@
                         <i class="fas fa-user-check green icon-text-large margin-bottom-25"></i>
                         <div id="message"></div>
                     </div>
+
+                    <div id="selfAssertedClaims" class="entry" style="display:none;">
+                        <div class="entry-item" id="selfAssertedClaims1">
+                            <label id="label-entry1" for="entry1">Entry 1</label>
+                            <input type="text" id="entry1" name="entry1" pattern="" placeholder="entry1" value="">
+                        </div>
+                        <div class="entry-item" id="selfAssertedClaims2">
+                            <label id="label-entry2" for="entry2">Entry 2</label>
+                            <input type="text" id="entry2" name="entry2" pattern="" placeholder="entry2" value="">
+                        </div>
+                        <p/>
+                    </div>
+
+
                     <button type="button" id="sign-in" class="button">GET CREDENTIAL</button>
+
                     <div id="qrText" style="display:none;">
                         <p class="small-text">
                             <img src="authenticator-icon.png" alt="Authenticator icon" class="icon-small"><br>
@@ -47,7 +62,18 @@
 
                         var respIssuanceReq = null;
                         signIn.addEventListener('click', () => {
-                            fetch('api/issuer/issue-request')
+                            // add self asserted claims, if any
+                            var queryStrings = "";
+                            if (selfAssertedClaims) {
+                                var idx;
+                                var sep = "?";
+                                for (idx = 0; idx < selfAssertedClaims.length; idx++) {
+                                    var id = idx + 1;
+                                    queryStrings += sep + selfAssertedClaims[idx].claim + "=" + document.getElementById('entry' + id).value;
+                                    sep = "&";
+                                };
+                            }
+                            fetch('api/issuer/issue-request' + queryStrings)
                                 .then(response => response.text())
                                 .catch(error => document.getElementById("message").innerHTML = error)
                                 .then(response => {
@@ -63,6 +89,7 @@
                                             document.getElementById('pinCodeText').innerHTML = "Pin code: " + respIssuanceReq.pin;
                                             document.getElementById('pinCodeText').style.display = "block";
                                         }
+                                        document.getElementById('selfAssertedClaims').style.display = "none";
                                     }
                                 })
 
@@ -95,18 +122,33 @@
 
                         })
 
+                        var selfAssertedClaims;
                         fetch('api/issuer/echo')
                             .then(response => response.text())
                             .catch(error => document.getElementById("message").innerHTML = error)
                             .then(response => {
                                 if (response.length > 0) {
                                     var data = JSON.parse(response);
+                                    data1 = data;
                                     document.getElementById('vcType').innerText = data.credentialType + " Issuance";
                                     document.getElementById('vcDescription').innerText = data.displayCard.description;
                                     document.body.style.backgroundColor = data.displayCard.backgroundColor;
                                     document.body.style.color = data.displayCard.textColor;
                                     document.getElementById('sign-in').style.backgroundColor = data.buttonColor;
                                     document.title = data.credentialType + ' Verifiable Credentials';
+                                    // open up text fields for self asserted claims, if any
+                                    selfAssertedClaims = null;
+                                    if (data.selfAssertedClaims) {                                        
+                                        selfAssertedClaims = data.selfAssertedClaims;
+                                        document.getElementById('selfAssertedClaims').style.display = "block";
+                                        var idx = 1;
+                                        for (idx = 0; idx < data.selfAssertedClaims.length; idx++) {
+                                            var id = idx + 1;
+                                            document.getElementById('selfAssertedClaims' + id).style.display = "block";
+                                            document.getElementById('label-entry' + id).innerHTML = data.selfAssertedClaims[idx].claim;
+                                            document.getElementById('entry' + id).placeholder = data.selfAssertedClaims[idx].claim;
+                                        };
+                                    }
                                 }
                             })
 
