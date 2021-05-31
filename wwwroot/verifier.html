@@ -62,7 +62,7 @@
                                 })
 
                             var checkStatus = setInterval(function () {
-                                fetch('api/verifier/presentation-response?id=' + respPresReq.id + "&requestId=" + respPresReq.requestId)
+                                fetch('api/verifier/presentation-response-status?id=' + respPresReq.id )
                                     .then(response => response.text())
                                     .catch(error => document.getElementById("message").innerHTML = error)
                                     .then(response => {

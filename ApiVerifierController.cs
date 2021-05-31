@@ -168,7 +168,7 @@ namespace client_api_test_service_dotnet
                 return ReturnErrorMessage(ex.Message);
             }
         }
-        [HttpGet("/api/verifier/presentation-response")]
+        [HttpGet("/api/verifier/presentation-response-status")]
         public async Task<ActionResult> presentationResponse() {
             TraceHttpRequest();
             try {
