@@ -1,0 +1,27 @@
+{
+  "authority": "did-of-the Issuer",
+  "includeQRCode": true,
+  "registration": {
+    "clientName": "the verifier's client name"
+  },
+  "callback": {
+    "url": "endpoint to your callback when VC is presented and validated",
+    "nonce": "...",
+    "state": "you pass your state here to correlate it when you get the callback",
+    "headers": {
+      "my-api-key": "...set at runtime..."
+    }
+  },
+  "issuance": {
+    "type": "your credentialType",
+    "manifest": "https://portableidentitycards.azure-api.net/dev/536279f6-15cc-45f2-be2d-61e352b51eef/portableIdentities/contracts/ExternalClaimsClientAPI",
+    "pin": {
+      "value": "012345",
+      "length": 6
+    },
+    "claims": {
+      "mySpecialClaimOne": "mySpecialValueOne",
+      "mySpecialClaimTwo": "mySpecialValueTwo"
+    }
+  }
+}

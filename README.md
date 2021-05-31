@@ -25,15 +25,18 @@ To call the VC Client API to start the issuance process, the DotNet API creates 
   "registration": {
     "clientName": "the verifier's client name"
   },
+  "callback": {
+    "url": "https://contoso.com/api/issuer/issuanceCallback",
+    "state": "you pass your state here to correlate it when you get the callback",
+    "headers:" {
+        "keyname": "any value you want in your callback"
+    }
+  },
   "issuance": {
     "type": "your credentialType",
-    "manifest": "https://portableidentitycards.azure-api.net/dev/536279f6-15cc-45f2-be2d-61e352b51eef/portableIdentities/contracts/MyCredentialTypeName",
-    "callback": "https://contoso.com/api/issuer/issuanceCallback",
-    "nonce": "...",
-    "state": "you pass your state here to correlate it when you get the callback",
+    "manifest": "https://beta.did.msidentity.com/v1.0/3c32ed40-8a10-465b-8ba4-0b1e86882668/verifiableCredential/contracts/VerifiedCredentialExpert",
     "pin": {
       "value": "012345",
-      "type": "numeric",
       "length": 6
     },
     "claims": {
@@ -47,11 +50,11 @@ To call the VC Client API to start the issuance process, the DotNet API creates 
 - **authority** - is the DID identifier for your registered Verifiable Credential i portal.azure.com.
 - **includeQRCode** - If you want the VC Client API to return a `data:image/png;base64` string of the QR code to present in the browser. If you select `false`, you must create the QR code yourself (which is not difficult).
 - **registration.clientName** - name of your app which will be shown in the Microsoft Authentictor
+- **callback.url** - a callback endpoint in your DotNet API. The VC Client API will call this endpoint when the issuance is completed.
+- **callback.state** - A state value you provide so you can correlate this request when you get callback confirmation
+- **callback.headers** - Any HTTP Header values that you would like the VC Clint API to pass back in the callbacks. Here you could set your own API key, for instance
 - **issuance.type** - the name of your credentialType. Usually matches the last part of the manifest url
 - **issuance.manifest** - url of your manifest for your VC. This comes from your defined Verifiable Credential in portal.azure.com
-- **issuance.callback** - a callback endpoint in your DotNet API. The VC Client API will call this endpoint when the issuance is completed.
-- **issuance.nonce** - The random value to prevent replay attacks
-- **issuance.state** - A state value you provide so you can correlate this request when you get callback confirmation
 - **issuance.pin** - If you want to require a pin code in the Microsoft Authenticator for this issuance request. This can be useful if it is a self issuing situation where there is no possibility of asking the user to prove their identity via a login. If you don't want to use the pin functionality, you should not have the pin section in the JSON structure. The appsettings.PinCode.json contains a settings for issuing with pin code.
 - **issuance.claims** - optional, extra claims you want to include in the VC.
 
@@ -62,7 +65,7 @@ In the response message from the VC Client API, it will include it's own callbac
 In your callback endpoint, you will get a callback with the below message when the QR code is scanned.
 
 ```JSON
-{"message":"request_retrieved","requestId":"9463da82-e397-45b6-a7a2-2c4223b9fdd0"}
+{"code":"request_retrieved","requestId":"9463da82-e397-45b6-a7a2-2c4223b9fdd0", "state": "...what you passed as the state value..."}
 ```
 
 ## Verification
@@ -79,10 +82,14 @@ To call the VC Client API to start the verification process, the DotNet API crea
     "clientName": "the verifier's client name",
     "logoUrl": "https://test-relyingparty.azurewebsites.net/images/did_logo.png"
   },
-  "presentation": {
-    "callback": "https://contoso.com/api/verifier/presentationCallback",
-    "nonce": "...",
+  "callback": {
+    "url": "https://contoso.com/api/verifier/presentationCallback",
     "state": "you pass your state here to correlate it when you get the callback",
+    "headers:" {
+        "keyname": "any value you want in your callback"
+    }
+  },
+  "presentation": {
     "includeReceipt": true,
     "requestedCredentials": [
       {
@@ -101,7 +108,7 @@ Much of the data is the same in this JSON structure, but some differences needs 
 - **authority** vs **trustedIssuers** - The Verifier and the Issuer may be two different entities. For example, the Verifier might be a online service, like a car rental service, while the DID it is asking for is the issuing entity for drivers licenses. Note that `trustedIssuers` is a collection of DIDs, which means you can ask for multiple VCs from the user
 - **presentation** - required for a Verification request. Note that `issuance` and `presentation` are mutually exclusive. You can't send both.
 - **requestedCredentials** - please also note that the `requestedCredentials` is a collection too, which means you can ask to create a presentation request that contains multiple DIDs.
-- **includeReceipt** - if set to true, the `presentation_verified` callback will contain the `presentationReceipt` element.
+- **includeReceipt** - if set to true, the `presentation_verified` callback will contain the `receipt` element.
 
 ### Verification Callback
 
@@ -109,60 +116,42 @@ In your callback endpoint, you will get a callback with the below message when t
 
 When the QR code is scanned, you get a short callback like this.
 ```JSON
-{"message":"request_retrieved","requestId":"c18d8035-3fc8-4c27-a5db-9801e6232569"}
+{"code":"request_retrieved","requestId":"c18d8035-3fc8-4c27-a5db-9801e6232569", "state": "...what you passed as the state value..."}
 ```
 
 Once the VC is verified, you get a second, more complete, callback which contains all the details on what whas presented by the user.
 
 ```JSON
 {
-    "message":"presentation_verified",
-    "claims":
-    {
-        "YourCredentialType.displayName":"Alice Contoso",
-        "YourCredentialType.sub":"...",
-        "YourCredentialType.tid":"...",
-        "YourCredentialType.username":"alice@contoso.com",
-        "YourCredentialType.lastName":"Contoso",
-        "YourCredentialType.firstName":"alice"
-    },
-    "state":"4c9320dc-d34a-4e1a-b17d-179bdafe5895",
-    "nonce":"078ff71a-7eeb-4a92-8ee2-6f5aa5fb40f5",
-    "presentationReceipt":{
-        "state":"...",
-        "exp":1620579579,
-        "attestations":
-        {
-            "presentations":
-            {
-                "YourCredentialType":"...JWT Token of VC..."
-            }
+    "code":"presentation_verified",
+    "requestId":"c18d8035-3fc8-4c27-a5db-9801e6232569",
+    "state": "...what you passed as the state value...",
+    "subject": "did:ion: ... of the VC holder...",
+    "issuers": [
+      "type": [
+            "VerifiableCredential",
+            "your credentialType"
+      ],
+      "claims": {
+        "displayName":"Alice Contoso",
+        "sub":"...",
+        "tid":"...",
+        "username":"alice@contoso.com",
+        "lastName":"Contoso",
+        "firstName":"alice"
+      }
+    ],
+    "receipt":{
+        "id_token":
+            "YourCredentialType":"...JWT Token of VC..."
         },
-        "nonce":"078ff71a-7eeb-4a92-8ee2-6f5aa5fb40f5",
-        "sub_jwk": { ...jwt details ... },
-        "jti":"2F0898A5-7B46-4BCA-897D-6E3AB643DDD9",
-        "iss":"https://self-issued.me",
-        "sub":"i1HVr0lamHTuWpUEOL06454yDIZfNhTP4tommz_7KFg",
-        "presentation_submission":
-        {
-            "descriptor_map":[
-                {
-                    "path":"$.attestations.presentations.YourCredentialType","id":"YourCredentialType",
-                    "encoding":"base64Url",
-                    "format":"JWT"
-                }
-            ]
-        },
-        "did":"did:ion: ...of the user",
-        "iat":1620576579,
-        "aud":"https://draft.azure-api.net/xyz/api/client/v1.0/present"
+        "state":"...VC Client API state..."
     }
 }
 ```
 Some notable attributes in the message:
 - **claims** - parsed claims from the VC
-- **presentation_submission.presentations.path** - JSON path to the VCs JWT token
-- **did** - the DID of the user who presented the VC
+- **receipt.id_token** - the DID of the presentation
 
 ## Running the sample
 
@@ -174,6 +163,11 @@ git clone https://github.com/cljung/client-api-test-service-dotnet.git
 cd client-api-test-service-dotnet
 dotnet build "client-api-test-service-dotnet.csproj" -c Debug -o .\bin\Debug\netcoreapp3.1
 dotnet run
+```
+
+You can specify a CredentialType in the appsettings.json on the command line 
+```Powershell
+dotnet run AppSettings:ActiveCredentialType=FawltyTowers2CampusPass
 ```
 
 Then, open a separate command prompt and run the following command
@@ -211,13 +205,18 @@ Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Bro
 ## appsettings.json
 
 The configuration you have in the `appsettings.json` file determinds which CredentialType you will be using. If you want to use your own credentials, you need to update this file. In order to make it easy to shift between different configurations, the `AppSettings:ActiveCredentialType` points to which setting in appsetting.json that should be used. This way you can have multiple configurations, just change one line and then restart to test a new Verifiable Credential.
+The setting `AppSetting:ActiveCredentialType` determinds which CredentialType that should be used when the program is running. 
+
+At run-time, the program will use the settings you provide to build the JSON payload to send to the VC Client API for isuance and presentation.
 
 The available settings in the repo are:
 
 - **AppSettings.VerifiedCredentialExpert** - The sample VC from docs.microsoft.com
 - **AppSettings.Cljungdemob2cMembership** - References my VC which issues from my test Azure AD B2C tenant 
 - **AppSettings.FawltyTowers2Employee** - References my VC which issues from my test Azure AD Premium tenant
+- **AppSettings.FawltyTowers2CampusPass** - References my VC which issues from my test Azure AD Premium tenant. It uses an id token hint and a pin code and no OIDC IDP
 - **AppSettings.PinCode** - References a VC where you only need a pin code to issue yourself a VC
+
 
 ```JSON
 {
@@ -229,9 +228,9 @@ The available settings in the repo are:
     }
   },
   "AllowedHosts": "*",
-    "AppSettings": {
-    "ActiveCredentialType": "VerifiedCredentialExpert",
-    "ApiEndpoint": "https://draft.azure-api.net/xyz/api/client/v1.0/request",
+  "AppSettings": {
+    "ActiveCredentialType": "FawltyTowers2CampusPass",
+    "ApiEndpoint": "https://dev.did.msidentity.com/v1.0/abc/verifiablecredentials/request",
     "ApiKey": "MyApiKey",
     "UseAkaMs": false,
     "CookieKey": "state",
@@ -249,7 +248,7 @@ The available settings in the repo are:
     "client_tos_uri": "https://www.microsoft.com/servicesagreement",
     "client_purpose": "To check if you know how to use verifiable credentials."
   },
-  "AppSettings.SomeOtherCredentialType": {
+  "SomeOtherCredentialType": {
   }
 }
 ``` 

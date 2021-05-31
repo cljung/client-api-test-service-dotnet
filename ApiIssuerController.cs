@@ -21,14 +21,14 @@ namespace client_api_test_service_dotnet
     [ApiController]
     public class ApiIssuerController : ApiBaseVCController
     {
-        private const string IssuanceRequestConfigFile = "issuance_request_config.json";
+        private const string IssuanceRequestConfigFile = "issuance_request_config_v2.json";
 
         public ApiIssuerController(IOptions<AppSettingsModelVC> vcSettings, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiIssuerController> log) : base(vcSettings, appSettings, memoryCache, env, log)
         {
         }
 
         protected string GetApiPath() {
-            return string.Format("{0}/api/issuer", GetRequestHostName());
+            return string.Format("{0}/api/issuer", GetRequestHostName() );
         }
 
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,7 +39,7 @@ namespace client_api_test_service_dotnet
         public async Task<ActionResult> echo() {
             TraceHttpRequest();
             try {
-                JObject manifest = JObject.Parse(GetDidManifest());
+                JObject manifest = JObject.Parse( GetDidManifest() );
                 var info = new
                 {
                     date = DateTime.Now.ToString(),
@@ -63,7 +63,7 @@ namespace client_api_test_service_dotnet
         public async Task<ActionResult> issuance() {
             TraceHttpRequest();
             try {
-                return SendStaticJsonFile(IssuanceRequestConfigFile);
+                return SendStaticJsonFile( IssuanceRequestConfigFile );
             } catch (Exception ex) {
                 return ReturnErrorMessage( ex.Message );
             }
@@ -72,8 +72,8 @@ namespace client_api_test_service_dotnet
         public async Task<ActionResult> issuanceReference() {
             TraceHttpRequest();
             try {
-                string jsonString = ReadFile(IssuanceRequestConfigFile);
-                if ( string.IsNullOrEmpty(jsonString) ) {
+                string jsonString = ReadFile( IssuanceRequestConfigFile );
+                if ( string.IsNullOrEmpty( jsonString ) ) {
                     return ReturnErrorMessage( IssuanceRequestConfigFile + " not found" );
                 }
                 // get self asserted claims, if any
@@ -81,19 +81,18 @@ namespace client_api_test_service_dotnet
                 if (this.VCSettings.selfAssertedClaims != null && this.VCSettings.selfAssertedClaims.Count > 0) {
                     selfAssertedClaims = new JObject();
                     foreach (var c in this.VCSettings.selfAssertedClaims) {
-                        selfAssertedClaims.Add( new JProperty(c.claim, this.Request.Query[c.claim].ToString() ));
+                        selfAssertedClaims.Add( new JProperty( c.claim, this.Request.Query[c.claim].ToString() ));
                     }
                 }                
-                string state = Guid.NewGuid().ToString();
-                string nonce = Guid.NewGuid().ToString();
+                string correlationId = Guid.NewGuid().ToString();
                 JObject config = JObject.Parse(jsonString);
                 config["authority"] = VCSettings.didIssuer;
                 config["registration"]["clientName"] = AppSettings.client_name;
-                //string urlCallback = string.Format("{0}/issuanceCallback/{1}", GetApiPath(), pin);
-                string urlCallback = string.Format("{0}/issuanceCallback", GetApiPath() );
-                config["issuance"]["callback"] = urlCallback;
-                config["issuance"]["state"] = state;
-                config["issuance"]["nonce"] = nonce;
+                var callback = config["callback"];
+                callback["url"] = string.Format("{0}/issuanceCallback", GetApiPath());
+                callback["state"] = correlationId;
+                callback["nonce"] = Guid.NewGuid().ToString();
+                callback["headers"]["my-api-key"] = this.AppSettings.ApiKey;
                 config["issuance"]["type"] = VCSettings.credentialType;
                 config["issuance"]["manifest"] = VCSettings.manifest;
                 string pin = null;
@@ -123,9 +122,7 @@ namespace client_api_test_service_dotnet
                 if (this.VCSettings.PinCodeLength > 0) {
                     requestConfig["pin"] = pin;
                 }
-                //  iOS Authenticator doesn't allow redirects - if you set UsaAkaMS == true in appsettings.json, you don't need this
-                requestConfig["url"] = requestConfig["url"].ToString().Replace("https://aka.ms/vcrequest?", "https://draft.azure-api.net/api/client/v1.0/request?");
-                requestConfig.Add(new JProperty("id", state));
+                requestConfig.Add(new JProperty("id", correlationId));
                 requestConfig.Add(new JProperty("link", requestConfig["url"].ToString()));
                 jsonString = JsonConvert.SerializeObject(requestConfig);
                 return ReturnJson( jsonString );
@@ -142,14 +139,13 @@ namespace client_api_test_service_dotnet
                 string body = GetRequestBody();
                 _log.LogTrace(body);
                 JObject issuanceResponse = JObject.Parse(body);
-                if (issuanceResponse["message"].ToString() == "request_retrieved") {
-                    string requestId = issuanceResponse["requestId"].ToString();
+                if (issuanceResponse["code"].ToString() == "request_retrieved") {
+                    string correlationId = issuanceResponse["state"].ToString();
                     var cacheData = new {
                         status = 1,
-                        message = "QR Code is scanned. Waiting for issuance to complete.",
-                        vc = ""
+                        message = "QR Code is scanned. Waiting for issuance to complete."
                     };
-                    CacheJsonObject(requestId, cacheData);
+                    CacheJsonObject(correlationId, cacheData);
                 }
                 return new OkResult();
             } catch (Exception ex) {
@@ -175,20 +171,14 @@ namespace client_api_test_service_dotnet
         public async Task<ActionResult> issuanceResponse() {
             TraceHttpRequest();
             try {
-                string state = this.Request.Query["id"];
-                if (string.IsNullOrEmpty(state)) {
+                string correlationId = this.Request.Query["id"];
+                if (string.IsNullOrEmpty(correlationId)) {
                     return ReturnErrorMessage("Missing argument 'id'");
                 }
                 string body = null;
-                if ( GetCachedValue(state, out body)) {
-                    RemoveCacheValue(state);
+                if ( GetCachedValue(correlationId, out body)) {
+                    RemoveCacheValue(correlationId);
                     return ReturnJson(body);
-                } else {
-                    string requestId = this.Request.Query["requestId"];
-                    if (!string.IsNullOrEmpty(requestId) && _cache.TryGetValue(requestId, out body)) {
-                        RemoveCacheValue(requestId);
-                        return ReturnJson(body);
-                    }
                 }
                 return new OkResult();
             } catch (Exception ex) {
