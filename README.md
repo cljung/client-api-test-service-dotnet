@@ -28,7 +28,7 @@ To call the VC Client API to start the issuance process, the DotNet API creates 
   "callback": {
     "url": "https://contoso.com/api/issuer/issuanceCallback",
     "state": "you pass your state here to correlate it when you get the callback",
-    "headers:" {
+    "headers": {
         "keyname": "any value you want in your callback"
     }
   },
@@ -85,7 +85,7 @@ To call the VC Client API to start the verification process, the DotNet API crea
   "callback": {
     "url": "https://contoso.com/api/verifier/presentationCallback",
     "state": "you pass your state here to correlate it when you get the callback",
-    "headers:" {
+    "headers": {
         "keyname": "any value you want in your callback"
     }
   },
@@ -142,8 +142,7 @@ Once the VC is verified, you get a second, more complete, callback which contain
       }
     ],
     "receipt":{
-        "id_token":
-            "YourCredentialType":"...JWT Token of VC..."
+        "id_token": "...JWT Token of VC..."
         },
         "state":"...VC Client API state..."
     }

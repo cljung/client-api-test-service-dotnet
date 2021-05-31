@@ -149,9 +149,16 @@ namespace client_api_test_service_dotnet
                     var claims = presentationResponse["issuers"][0]["claims"];
                     _log.LogTrace("presentationCallback() - presentation_verified\n{0}", claims );
 
+                    // build a displayName so we can tell the called who presented their VC
+                    JObject vcClaims = (JObject)presentationResponse["issuers"][0]["claims"];
+                    string displayName = "";
+                    if (vcClaims.ContainsKey("displayName"))
+                         displayName = vcClaims["displayName"].ToString();
+                    else displayName = string.Format("{0} {1}", vcClaims["firstName"], vcClaims["lastName"]);
+
                     var cacheData = new {
                         status = 2,
-                        message = string.Format("{0} {1}", claims["firstName"].ToString(), claims["lastName"].ToString() ),
+                        message = displayName,
                         presentationResponse = presentationResponse
                     };
                     CacheJsonObject(correlationId, cacheData );
