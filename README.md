@@ -164,9 +164,13 @@ dotnet build "client-api-test-service-dotnet.csproj" -c Debug -o .\bin\Debug\net
 dotnet run
 ```
 
-You can specify a CredentialType in the appsettings.json on the command line 
 ```Powershell
-dotnet run AppSettings:ActiveCredentialType=FawltyTowers2CampusPass
+dotnet run
+```
+
+You can specify a which credentials you should issue and verify by specifying the payload files on the command line. Read more on how to author these files below.
+```Powershell
+dotnet run /IssuanceRequestConfigFile=%cd%\requests\issuance_request_cljungdemob2c.json /PresentationRequestConfigFile=%cd%\requests\presentation_request_cljungdemob2c.json
 ```
 
 Then, open a separate command prompt and run the following command
@@ -176,6 +180,23 @@ ngrok http 5002
 ```
 
 Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Browse to it.
+
+### Author the json payload files
+
+There are a few samples of json files in the `requests` folder and you can clone them as you like to use other credentials. As you can see in the sample files, much of the details are not specified. These are the autofill fules:
+
+- **manifest** - you must specify the manifest url as the app downloads on the first request.
+- **type** - you ***only*** need to specify the type if it is different that the last part of the manifest url (usually they are the same)
+- **authority** - you need to set this to a `did:ion:...` DID ***if*** you are doing verification of a Verifiable Credentials of a VC that was issued by another party. If you are verifying credentials you issued yourself, the DID in the manifest is used.
+
+Other important things to consider
+
+- **pin** - do not specify a pin-element unless you are issuing credentials where you want a pin code. Either remove the element or set the length to 0.
+- **claims** - do not specify the claims element unless you are issuing credentials using the so called `id_token_hint` model.
+
+### id_token_hint model
+
+With the id_token_hint model, you don't configure a OIDC identity provider .well-known/openid-configuration in your Verifiable Credentials rules file. You manage the authentication yourself as a pre-step to starting and you then pass your required claims to the issuing service.
 
 ### Together with Azure AD B2C
 To use this sample together with Azure AD B2C, you first needs to build it, which means follow the steps above. 

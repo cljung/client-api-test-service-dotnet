@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using client_api_test_service_dotnet.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace client_api_test_service_dotnet
 {
@@ -23,15 +24,15 @@ namespace client_api_test_service_dotnet
         protected readonly IWebHostEnvironment _env;
         protected readonly ILogger<ApiBaseVCController> _log;
         protected readonly AppSettingsModel AppSettings;
-        protected readonly AppSettingsModelVC VCSettings;
+        protected readonly IConfiguration _configuration;
 
-        public ApiBaseVCController(IOptions<AppSettingsModelVC> vcSettings, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiBaseVCController> log)
+        public ApiBaseVCController(IConfiguration configuration, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiBaseVCController> log)
         {
             this.AppSettings = appSettings.Value;
-            this.VCSettings = vcSettings.Value;
             _cache = memoryCache;
             _env = env;
             _log = log;
+            _configuration = configuration;
         }
 
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -61,36 +62,10 @@ namespace client_api_test_service_dotnet
             };
             return new ContentResult { StatusCode = 409, ContentType = "application/json", Content = JsonConvert.SerializeObject(msg) };
         }
-        // read & cache the file
-        protected string ReadFile(string filename) {
-            string json = null;
-            string path = Path.Combine(_env.WebRootPath, filename);
-            if (!_cache.TryGetValue(path, out json)) {
-                if (System.IO.File.Exists(path)) {
-                    json = System.IO.File.ReadAllText(path);
-                    _cache.Set(path, json);
-                }
-            }
-            return json;
-        }
-        // read and return a file
-        protected ActionResult SendStaticJsonFile(string filename) {
-            string json = ReadFile(filename);
-            if (!string.IsNullOrEmpty(json)) {
-                return ReturnJson( json );
-            } else {
-                return ReturnErrorMessage( filename + " not found" );
-            }
-        }
-
         // POST to VC Client API
         protected bool HttpPost(string body, out HttpStatusCode statusCode, out string response) {
             response = null;
             HttpClient client = new HttpClient();
-            client.DefaultRequestHeaders.Add("x-ms-functions-key", this.AppSettings.ApiKey);
-            if ( !string.IsNullOrEmpty(this.AppSettings.UseAkaMs) ) {
-                client.DefaultRequestHeaders.Add("x-forwarded-useaka", this.AppSettings.UseAkaMs.ToString().ToLowerInvariant());
-            }
             HttpResponseMessage res = client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json")).Result;
             response = res.Content.ReadAsStringAsync().Result;
             client.Dispose();
@@ -126,17 +101,6 @@ namespace client_api_test_service_dotnet
             return JObject.Parse(Encoding.UTF8.GetString(Convert.FromBase64String(parts[1])));
         }
 
-        protected string GetDidManifest() {
-            string contents = null;
-            if (!_cache.TryGetValue("manifest", out contents)) {
-                HttpStatusCode statusCode = HttpStatusCode.OK;
-                if (HttpGet(this.VCSettings.manifest, out statusCode, out contents)) {
-                    _cache.Set("manifest", contents);
-                }
-            }
-            return contents;
-        }
-
         protected bool GetCachedValue(string key, out string value) {
             return _cache.TryGetValue(key, out value);
         }
@@ -149,11 +113,14 @@ namespace client_api_test_service_dotnet
                 return true;
             }
         }
-        protected void CacheJsonObject( string key, object jsonObject ) {
+        protected void CacheJsonObjectWithExpiery( string key, object jsonObject ) {
             _cache.Set( key, JsonConvert.SerializeObject(jsonObject), DateTimeOffset.Now.AddSeconds(this.AppSettings.CacheExpiresInSeconds));
         }
-        protected void CacheValue(string key, string value) {
+        protected void CacheValueWithExpiery(string key, string value) {
             _cache.Set(key, value, DateTimeOffset.Now.AddSeconds(this.AppSettings.CacheExpiresInSeconds));
+        }
+        protected void CacheValueWithNoExpiery(string key, string value) {
+            _cache.Set(key, value );
         }
         protected void RemoveCacheValue( string key ) {
             _cache.Remove(key);

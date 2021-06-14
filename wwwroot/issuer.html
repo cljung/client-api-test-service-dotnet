@@ -18,7 +18,7 @@
                 <center><h3>DotNet Client API VC Issuer Version</h3></center>
                 <div style="text-align: center;">
                     <!--<img id="vcLogo" src="ninja-icon.png" height=200px; />-->
-                    <img id="vcLogo" src="logo.png" height=200px; />
+                    <img id="vcLogo" src="api/issuer/logo.png" height=200px; />
                     <h1 id="vcType">NinjaCard Credential Issuance</h1>
                     <h3 id="vcDescription"></h3>
                     <div id="message-wrapper" class="margin-bottom-75 margin-top-75" style="display: none">
@@ -67,11 +67,11 @@
                             if (selfAssertedClaims) {
                                 var idx;
                                 var sep = "?";
-                                for (idx = 0; idx < selfAssertedClaims.length; idx++) {
+                                for (idx = 0; idx < Object.keys(selfAssertedClaims).length; idx++) {
                                     var id = idx + 1;
-                                    queryStrings += sep + selfAssertedClaims[idx].claim + "=" + document.getElementById('entry' + id).value;
+                                    queryStrings += sep + Object.keys(selfAssertedClaims)[idx] + "=" + document.getElementById('entry' + id).value;
                                     sep = "&";
-                                };
+                                }
                             }
                             fetch('api/issuer/issue-request' + queryStrings)
                                 .then(response => response.text())
@@ -142,12 +142,12 @@
                                         selfAssertedClaims = data.selfAssertedClaims;
                                         document.getElementById('selfAssertedClaims').style.display = "block";
                                         var idx = 1;
-                                        for (idx = 0; idx < data.selfAssertedClaims.length; idx++) {
+                                        for (idx = 0; idx < Object.keys(selfAssertedClaims).length; idx++) {
                                             var id = idx + 1;
                                             document.getElementById('selfAssertedClaims' + id).style.display = "block";
-                                            document.getElementById('label-entry' + id).innerHTML = data.selfAssertedClaims[idx].claim;
-                                            document.getElementById('entry' + id).placeholder = data.selfAssertedClaims[idx].claim;
-                                        };
+                                            document.getElementById('label-entry' + id).innerHTML = Object.keys(selfAssertedClaims)[idx];
+                                            document.getElementById('entry' + id).placeholder = selfAssertedClaims[Object.keys(selfAssertedClaims)[idx]];
+                                        }
                                     }
                                 }
                             })

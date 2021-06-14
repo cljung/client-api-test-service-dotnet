@@ -2,6 +2,7 @@
   "profiles": {
     "client_api_test_service_dotnet": {
       "commandName": "Project",
+      "commandLineArgs": "/presentationRequestConfigFile=C:\\Users\\cljung\\src\\DID\\client-api-test-service-dotnet\\requests\\presentation_request_cljungdemob2c.json /issuanceRequestConfigFile=C:\\Users\\cljung\\src\\DID\\client-api-test-service-dotnet\\requests\\issuance_request_cljungdemob2c.json",
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"

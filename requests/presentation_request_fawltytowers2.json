@@ -1,0 +1,26 @@
+{
+  "authority": "...set at runtime...",
+  "includeQRCode": false,
+  "registration": {
+    "clientName": "...set at runtime..."
+  },
+  "callback": {
+    "url": "...set at runtime...",
+    "nounce": "...set at runtime...",
+    "state": "...set at runtime...",
+    "headers": {
+      "my-api-key": "blabla"
+    }
+  },
+  "presentation": {
+    "includeReceipt": true,
+    "requestedCredentials": [
+      {
+        "type": "",
+        "manifest": "https://beta.did.msidentity.com/v1.0/9885457a-2026-4e2c-a47e-32ff52ea0b8d/verifiableCredential/contracts/FawltyTowers2Employee",
+        "purpose": "the purpose why the verifier asks for a VC",
+        "trustedIssuers": [ "did-of-the-Issuer-trusted" ]
+      }
+    ]
+  }
+}

@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using client_api_test_service_dotnet.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace client_api_test_service_dotnet
 {
@@ -23,14 +24,65 @@ namespace client_api_test_service_dotnet
     {
         protected const string PresentationRequestConfigFile = "presentation_request_config_v2.json";
 
-        public ApiVerifierController(IOptions<AppSettingsModelVC> vcSettings, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiVerifierController> log) : base(vcSettings, appSettings, memoryCache, env, log)
-        {            
+        public ApiVerifierController(IConfiguration configuration, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiVerifierController> log) : base(configuration, appSettings, memoryCache, env, log)
+        {
+            GetPresentationRequest();
         }
 
         protected string GetApiPath() {
             return string.Format("{0}/api/verifier", GetRequestHostName());
         }
 
+        protected JObject GetPresentationRequest() {
+            string json = null;
+            if (GetCachedValue("presentationRequest", out json)) {
+                return JObject.Parse(json);
+            }
+            // see if file path was passed on command line
+            string presentationRequestFile = _configuration.GetValue<string>("PresentationRequestConfigFile");
+            if (string.IsNullOrEmpty(presentationRequestFile))
+                 presentationRequestFile = PresentationRequestConfigFile;
+            if (!System.IO.File.Exists(presentationRequestFile)) {
+                _log.LogError( "File not found: {0}", presentationRequestFile );
+                return null;
+            }
+            _log.LogTrace("PresentationRequest file: {0}", presentationRequestFile);
+            json = System.IO.File.ReadAllText(presentationRequestFile);
+            JObject config = JObject.Parse(json);
+
+            // download manifest and cache it
+            string contents;
+            HttpStatusCode statusCode = HttpStatusCode.OK;
+            if (!HttpGet(config["presentation"]["requestedCredentials"][0]["manifest"].ToString(), out statusCode, out contents)) {
+                _log.LogError("HttpStatus {0} fetching manifest {1}", statusCode, config["presentation"]["requestedCredentials"][0]["manifest"].ToString() );
+                return null;
+            }
+            CacheValueWithNoExpiery("manifestPresentation", contents);
+            JObject manifest = JObject.Parse(contents);
+
+            // update presentationRequest from manifest with things that don't change for each request
+            if (!config["authority"].ToString().StartsWith("did:ion:")) {
+                config["authority"] = manifest["input"]["issuer"];
+            }
+            config["registration"]["clientName"] = AppSettings.client_name;
+            config["registration"]["logoUrl"] = manifest["display"]["card"]["logo"]["uri"].ToString(); //VCSettings.client_logo_uri;
+
+            var requestedCredentials = config["presentation"]["requestedCredentials"][0];
+            if (requestedCredentials["type"].ToString().Length == 0 ) {
+                requestedCredentials["type"] = manifest["id"];
+            }
+            requestedCredentials["trustedIssuers"][0] = manifest["input"]["issuer"]; //VCSettings.didIssuer;
+
+            json = JsonConvert.SerializeObject(config);
+            CacheValueWithNoExpiery("presentationRequest", json);
+            return config;
+        }
+        protected JObject GetPresentationManifest() {
+            if (GetCachedValue("manifestPresentation", out string json)) {
+                return JObject.Parse(json); ;
+            }
+            return null;
+        }
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         /// REST APIs
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -40,15 +92,14 @@ namespace client_api_test_service_dotnet
             TraceHttpRequest();
             try
             {
-                JObject manifest = JObject.Parse(GetDidManifest());
+                JObject manifest = GetPresentationManifest();
                 var info = new {
                     date = DateTime.Now.ToString(),
                     host = GetRequestHostName(),
                     api = GetApiPath(),
-                    didIssuer = VCSettings.didIssuer,
-                    didVerifier = VCSettings.didVerifier,
-                    credentialType = VCSettings.credentialType,
-                    client_purpose = VCSettings.client_purpose,
+                    didIssuer = manifest["input"]["issuer"], 
+                    didVerifier = manifest["input"]["issuer"], 
+                    credentialType = manifest["id"], 
                     displayCard = manifest["display"]["card"],
                     buttonColor = "#000080",
                     contract = manifest["display"]["contract"]
@@ -59,65 +110,48 @@ namespace client_api_test_service_dotnet
             }
         }
         [HttpGet]
-        [Route("/logo.png")]
+        [Route("/api/verifier/logo.png")]
         public async Task<ActionResult> logo() {
             TraceHttpRequest();
-            return Redirect(VCSettings.client_logo_uri);
-        }
-
-        [HttpGet]
-        public async Task<ActionResult> presentation() {
-            TraceHttpRequest();
-            try {
-                return SendStaticJsonFile(PresentationRequestConfigFile);
-            } catch (Exception ex) {
-                return ReturnErrorMessage( ex.Message );
-            }
+            JObject manifest = GetPresentationManifest();
+            return Redirect( manifest["display"]["card"]["logo"]["uri"].ToString() );
         }
 
         [HttpGet("/api/verifier/presentation-request")]
         public async Task<ActionResult> presentationReference() {
             TraceHttpRequest();
             try {
-                string jsonString = ReadFile( PresentationRequestConfigFile );
-                if (string.IsNullOrEmpty(jsonString)) {
-                    return ReturnErrorMessage( PresentationRequestConfigFile + " not found" );
+                JObject presentationRequest = GetPresentationRequest();
+                if ( presentationRequest == null) {
+                    return ReturnErrorMessage( "Presentation Request Config File not found" );
                 }
                 // The 'state' variable is the identifier between the Browser session, this API and VC client API doing the validation.
                 // It is passed back to the Browser as 'Id' so it can poll for status, and in the presentationCallback (presentation_verified)
                 // we use it to correlate which verification that got completed, so we can update the cache and tell the correct Browser session
                 // that they are done
                 string correlationId = Guid.NewGuid().ToString();
-                JObject config = JObject.Parse(jsonString);
-                config["authority"] = VCSettings.didVerifier;
-                config["registration"]["clientName"] = AppSettings.client_name;
-                config["registration"]["logoUrl"] = VCSettings.client_logo_uri;
 
                 // set details about where we want the VC Client API callback
-                var callback = config["callback"];
+                var callback = presentationRequest["callback"];
                 callback["url"] = string.Format("{0}/presentationCallback", GetApiPath());
                 callback["state"] = correlationId;
-                callback["nonce"] = Guid.NewGuid().ToString();
+                callback["nounce"] = Guid.NewGuid().ToString();
                 callback["headers"]["my-api-key"] = this.AppSettings.ApiKey;
 
-                // set details about the VC we are asking for
-                var requestedCredentials = config["presentation"]["requestedCredentials"][0];
-                requestedCredentials["type"] = VCSettings.credentialType;
-                requestedCredentials["manifest"] = VCSettings.manifest;
-                requestedCredentials["purpose"] = VCSettings.client_purpose;
-                requestedCredentials["trustedIssuers"][0] = VCSettings.didIssuer;
+                string jsonString = JsonConvert.SerializeObject(presentationRequest);
+                _log.LogTrace( "VC Client API Request\n{0}", jsonString );
 
-                jsonString = JsonConvert.SerializeObject(config);
                 string contents = "";
                 HttpStatusCode statusCode = HttpStatusCode.OK;
                 if ( !HttpPost(jsonString, out statusCode, out contents))  {
+                    _log.LogError("VC Client API Error Response\n{0}", contents);
                     return ReturnErrorMessage( contents );
                 }
-                // pass the response to our caller
+                // pass the response to our caller (but add id)
                 JObject apiResp = JObject.Parse(contents);
                 apiResp.Add(new JProperty("id", correlationId));
-                apiResp.Add(new JProperty("link", apiResp["url"].ToString()));
                 contents = JsonConvert.SerializeObject(apiResp);
+                _log.LogTrace("VC Client API Response\n{0}", contents);
                 return ReturnJson( contents );
             }  catch (Exception ex) {
                 return ReturnErrorMessage(ex.Message);
@@ -141,7 +175,7 @@ namespace client_api_test_service_dotnet
                         status = 1,
                         message = "QR Code is scanned. Waiting for validation..."
                     };
-                    CacheJsonObject(correlationId, cacheData);
+                    CacheJsonObjectWithExpiery( correlationId, cacheData );
                 }
 
                 // presentation_verified == The VC Client API has received and validateed the presented VC
@@ -161,7 +195,7 @@ namespace client_api_test_service_dotnet
                         message = displayName,
                         presentationResponse = presentationResponse
                     };
-                    CacheJsonObject(correlationId, cacheData );
+                    CacheJsonObjectWithExpiery(correlationId, cacheData );
                 }
                 return new OkResult();
             } catch (Exception ex) {
@@ -223,6 +257,7 @@ namespace client_api_test_service_dotnet
                 // get the token that was presented and dig out the VC credential from it since we want to return the
                 // Issuer DID and the holders DID to B2C
                 JObject didIdToken = JWTTokenToJObject(presentationResponse["receipt"]["id_token"].ToString());
+                var credentialType = didIdToken["presentation_submission"]["descriptor_map"][0]["id"].ToString();
                 var presentationPath = didIdToken["presentation_submission"]["descriptor_map"][0]["path"].ToString();
                 JObject presentation = JWTTokenToJObject(didIdToken.SelectToken(presentationPath).ToString());
                 string vcToken = presentation["vp"]["verifiableCredential"][0].ToString();
@@ -248,7 +283,7 @@ namespace client_api_test_service_dotnet
                 var b2cResponse = new {
                     id = correlationId,
                     credentialsVerified = true,
-                    credentialType = VCSettings.credentialType,
+                    credentialType = credentialType,
                     displayName = displayName,
                     givenName = vcClaims["firstName"].ToString(),
                     surName = vcClaims["lastName"].ToString(),
