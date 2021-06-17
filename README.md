@@ -169,10 +169,6 @@ dotnet build "client-api-test-service-dotnet.csproj" -c Debug -o .\bin\Debug\net
 dotnet run
 ```
 
-```Powershell
-dotnet run
-```
-
 You can specify a which credentials you should issue and verify by specifying the payload files on the command line. Read more on how to author these files below.
 ```Powershell
 dotnet run /IssuanceRequestConfigFile=%cd%\requests\issuance_request_cljungdemob2c.json /PresentationRequestConfigFile=%cd%\requests\presentation_request_cljungdemob2c.json
