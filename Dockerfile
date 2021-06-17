@@ -27,8 +27,8 @@ ENTRYPOINT ["dotnet", "client-api-test-service-dotnet.dll"]
 ### build
 # docker build -t client-api-test-service-dotnet:v1.0 .
 
-### run
-# docker run -d -p 8080:80 client-api-test-service-dotnet:v1.0
+### run Windows
+# docker run --rm -it -p 5002:80 -e IssuanceRequestConfigFile=./requests/issuance_request_config_v2.json -e PresentationRequestConfigFile=./requests/presentation_request_config_v2.json client-api-test-service-dotnet:v1.0
 
 ### browse
 # http://localhost
