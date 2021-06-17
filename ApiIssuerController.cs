@@ -65,7 +65,6 @@ namespace client_api_test_service_dotnet
                 config["authority"] = manifest["input"]["issuer"];
             }
             config["registration"]["clientName"] = AppSettings.client_name;
-            config["registration"]["logoUrl"] = manifest["display"]["card"]["logo"]["uri"].ToString(); //VCSettings.client_logo_uri;
 
             if (config["issuance"]["type"].ToString().Length == 0 ) {
                 config["issuance"]["type"] = manifest["id"];

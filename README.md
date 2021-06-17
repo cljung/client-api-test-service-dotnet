@@ -60,6 +60,15 @@ To call the VC Client API to start the issuance process, the DotNet API creates 
 
 In the response message from the VC Client API, it will include it's own callback url, which means that once the Microsoft Authenticator has scanned the QR code, it will contact the VC Client API directly and not your DotNet API. The DotNet API will get confirmation via the callback.
 
+```json
+{
+    "requestId": "799f23ea-524a-45af-99ad-cf8e5018814e",
+    "url": "openid://vc?request_uri=https://dev.did.msidentity.com/v1.0/abc/verifiablecredentials/request/178319f7-20be-4945-80fb-7d52d47ae82e",
+    "expiry": 1622227690,
+    "qrCode": "data:image/png;base64,iVBORw0KGgoA<SNIP>"
+}
+```
+
 ### Issuance Callback
 
 In your callback endpoint, you will get a callback with the below message when the QR code is scanned.
@@ -128,10 +137,7 @@ Once the VC is verified, you get a second, more complete, callback which contain
     "state": "...what you passed as the state value...",
     "subject": "did:ion: ... of the VC holder...",
     "issuers": [
-      "type": [
-            "VerifiableCredential",
-            "your credentialType"
-      ],
+      "type": [ "VerifiableCredential", "your credentialType" ],
       "claims": {
         "displayName":"Alice Contoso",
         "sub":"...",
@@ -143,8 +149,7 @@ Once the VC is verified, you get a second, more complete, callback which contain
     ],
     "receipt":{
         "id_token": "...JWT Token of VC..."
-        },
-        "state":"...VC Client API state..."
+        }
     }
 }
 ```
