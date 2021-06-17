@@ -137,14 +137,16 @@ Once the VC is verified, you get a second, more complete, callback which contain
     "state": "...what you passed as the state value...",
     "subject": "did:ion: ... of the VC holder...",
     "issuers": [
-      "type": [ "VerifiableCredential", "your credentialType" ],
-      "claims": {
-        "displayName":"Alice Contoso",
-        "sub":"...",
-        "tid":"...",
-        "username":"alice@contoso.com",
-        "lastName":"Contoso",
-        "firstName":"alice"
+      {
+          "type": [ "VerifiableCredential", "your credentialType" ],
+          "claims": {
+            "displayName":"Alice Contoso",
+            "sub":"...",
+            "tid":"...",
+            "username":"alice@contoso.com",
+            "lastName":"Contoso",
+            "firstName":"alice"
+          }
       }
     ],
     "receipt":{
@@ -221,57 +223,6 @@ To use this sample together with Azure AD B2C, you first needs to build it, whic
 ![API Overview](media/api-b2c-overview.png)
 
 Then you need to deploy B2C Custom Policies that has configuration to add Verifiable Credentials as a Claims Provider and to integrate with this DotNet API. This, you will find in the github repo [https://github.com/cljung/b2c-vc-signin](https://github.com/cljung/b2c-vc-signin). That repo has a node.js issuer/verifier WebApp that uses the VC SDK, but you can skip the `vc` directory and only work with what is in the `b2c` directory. In the instructions on how to edit the B2C policies, it is mentioned that you need to update the `VCServiceUrl` and the `ServiceUrl` to point to your API. That means you need to update it with your `ngrok` url you got when you started the DotNet API in this sample. Otherwise, follow the instructions in [https://github.com/cljung/b2c-vc-signin/blob/main/b2c/README.md](https://github.com/cljung/b2c-vc-signin/blob/main/b2c/README.md) and deploy the B2C Custom Policies
-
-## appsettings.json
-
-The configuration you have in the `appsettings.json` file determinds which CredentialType you will be using. If you want to use your own credentials, you need to update this file. In order to make it easy to shift between different configurations, the `AppSettings:ActiveCredentialType` points to which setting in appsetting.json that should be used. This way you can have multiple configurations, just change one line and then restart to test a new Verifiable Credential.
-The setting `AppSetting:ActiveCredentialType` determinds which CredentialType that should be used when the program is running. 
-
-At run-time, the program will use the settings you provide to build the JSON payload to send to the VC Client API for isuance and presentation.
-
-The available settings in the repo are:
-
-- **AppSettings.VerifiedCredentialExpert** - The sample VC from docs.microsoft.com
-- **AppSettings.Cljungdemob2cMembership** - References my VC which issues from my test Azure AD B2C tenant 
-- **AppSettings.FawltyTowers2Employee** - References my VC which issues from my test Azure AD Premium tenant
-- **AppSettings.FawltyTowers2CampusPass** - References my VC which issues from my test Azure AD Premium tenant. It uses an id token hint and a pin code and no OIDC IDP
-- **AppSettings.PinCode** - References a VC where you only need a pin code to issue yourself a VC
-
-
-```JSON
-{
-  "Logging": {
-    "LogLevel": {
-      "Default": "Trace",
-      "Microsoft": "Warning",
-      "Microsoft.Hosting.Lifetime": "Information"
-    }
-  },
-  "AllowedHosts": "*",
-  "AppSettings": {
-    "ActiveCredentialType": "FawltyTowers2CampusPass",
-    "ApiEndpoint": "https://dev.did.msidentity.com/v1.0/abc/verifiablecredentials/request",
-    "ApiKey": "MyApiKey",
-    "UseAkaMs": false,
-    "CookieKey": "state",
-    "CookieExpiresInSeconds": 7200,
-    "CacheExpiresInSeconds": 300,
-    "client_name": "DotNet Client API Verifier"
-  },
-  "VerifiedCredentialExpert": {
-    "PinCodeLength": 0,
-    "didIssuer": "did:ion:EiAUeAySrc1qgPucLYI_ytfudT8bFxUETNolzz4PCdy1bw:eyJkZWx0YSI6eyJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljS2V5cyI6W3siaWQiOiJzaWdfMjRiYjMwNzQiLCJwdWJsaWNLZXlKd2siOnsiY3J2Ijoic2VjcDI1NmsxIiwia3R5IjoiRUMiLCJ4IjoiRDlqYUgwUTFPZW1XYVVfeGtmRzBJOVoyYnctOFdLUFF2TWt2LWtkdjNxUSIsInkiOiJPclVUSzBKSWN0UnFQTHRCQlQxSW5iMTdZS29sSFJvX1kyS0Zfb3YyMEV3In0sInB1cnBvc2VzIjpbImF1dGhlbnRpY2F0aW9uIiwiYXNzZXJ0aW9uTWV0aG9kIl0sInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkifV0sInNlcnZpY2VzIjpbeyJpZCI6ImxpbmtlZGRvbWFpbnMiLCJzZXJ2aWNlRW5kcG9pbnQiOnsib3JpZ2lucyI6WyJodHRwczovL2RpZC53b29kZ3JvdmVkZW1vLmNvbS8iXX0sInR5cGUiOiJMaW5rZWREb21haW5zIn1dfX1dLCJ1cGRhdGVDb21taXRtZW50IjoiRWlBeWF1TVgzRWtBcUg2RVFUUEw4SmQ4alVvYjZXdlZrNUpSamdodEVYWHhDQSJ9LCJzdWZmaXhEYXRhIjp7ImRlbHRhSGFzaCI6IkVpQ1NvajVqSlNOUjBKU0tNZEJ1Y2RuMlh5U2ZaYndWVlNIWUNrREllTHV5NnciLCJyZWNvdmVyeUNvbW1pdG1lbnQiOiJFaUR4Ym1ELTQ5cEFwMDBPakd6VXdoNnY5ZjB5cnRiaU5TbXA3dldwbTREVHpBIn19",
-    "didVerifier": "did:ion:EiAUeAySrc1qgPucLYI_ytfudT8bFxUETNolzz4PCdy1bw:eyJkZWx0YSI6eyJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljS2V5cyI6W3siaWQiOiJzaWdfMjRiYjMwNzQiLCJwdWJsaWNLZXlKd2siOnsiY3J2Ijoic2VjcDI1NmsxIiwia3R5IjoiRUMiLCJ4IjoiRDlqYUgwUTFPZW1XYVVfeGtmRzBJOVoyYnctOFdLUFF2TWt2LWtkdjNxUSIsInkiOiJPclVUSzBKSWN0UnFQTHRCQlQxSW5iMTdZS29sSFJvX1kyS0Zfb3YyMEV3In0sInB1cnBvc2VzIjpbImF1dGhlbnRpY2F0aW9uIiwiYXNzZXJ0aW9uTWV0aG9kIl0sInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkifV0sInNlcnZpY2VzIjpbeyJpZCI6ImxpbmtlZGRvbWFpbnMiLCJzZXJ2aWNlRW5kcG9pbnQiOnsib3JpZ2lucyI6WyJodHRwczovL2RpZC53b29kZ3JvdmVkZW1vLmNvbS8iXX0sInR5cGUiOiJMaW5rZWREb21haW5zIn1dfX1dLCJ1cGRhdGVDb21taXRtZW50IjoiRWlBeWF1TVgzRWtBcUg2RVFUUEw4SmQ4alVvYjZXdlZrNUpSamdodEVYWHhDQSJ9LCJzdWZmaXhEYXRhIjp7ImRlbHRhSGFzaCI6IkVpQ1NvajVqSlNOUjBKU0tNZEJ1Y2RuMlh5U2ZaYndWVlNIWUNrREllTHV5NnciLCJyZWNvdmVyeUNvbW1pdG1lbnQiOiJFaUR4Ym1ELTQ5cEFwMDBPakd6VXdoNnY5ZjB5cnRiaU5TbXA3dldwbTREVHpBIn19",
-    "manifest": "https://beta.did.msidentity.com/v1.0/3c32ed40-8a10-465b-8ba4-0b1e86882668/verifiableCredential/contracts/VerifiedCredentialExpert",
-    "credentialType": "VerifiedCredentialExpert",
-    "client_logo_uri": "https://didcustomerplayground.blob.core.windows.net/public/VerifiedCredentialExpert_icon.png",
-    "client_tos_uri": "https://www.microsoft.com/servicesagreement",
-    "client_purpose": "To check if you know how to use verifiable credentials."
-  },
-  "SomeOtherCredentialType": {
-  }
-}
-``` 
 
 ### LogLevel Trace
 
