@@ -1,18 +1,13 @@
-using client_api_test_service_dotnet.Models;
+using AA.DIDApi.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace client_api_test_service_dotnet
+namespace AA.DIDApi
 {
     public class Startup
     {
@@ -36,11 +31,13 @@ namespace client_api_test_service_dotnet
             }));
 
             services.Configure<AppSettingsModel>(Configuration.GetSection("AppSettings"));
+            
             // If using Kestrel:
             services.Configure<KestrelServerOptions>(options =>
             {
                 options.AllowSynchronousIO = true;
             });
+
             // If using IIS:
             services.Configure<IISServerOptions>(options =>
             {
@@ -52,10 +49,9 @@ namespace client_api_test_service_dotnet
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             Console.WriteLine("IssuanceRequestConfigFile={0}\nPresentationRequestConfigFile={1}"
-                    , System.Environment.GetEnvironmentVariable("IssuanceRequestConfigFile")
-                    , System.Environment.GetEnvironmentVariable("PresentationRequestConfigFile")
-                    );
-            if ( env.IsDevelopment())
+                    , Environment.GetEnvironmentVariable("IssuanceRequestConfigFile")
+                    , Environment.GetEnvironmentVariable("PresentationRequestConfigFile"));
+            if(env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -78,7 +74,6 @@ namespace client_api_test_service_dotnet
             {
                 endpoints.MapDefaultControllerRoute();
             });
-
         }
     }
 }
