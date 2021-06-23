@@ -2,10 +2,9 @@
   "profiles": {
     "client_api_test_service_dotnet": {
       "commandName": "Project",
+      "commandLineArgs": "/IssuanceRequestConfigFile=%cd%\\requests\\issuance_request_config_v2.json /PresentationRequestConfigFile=%cd%\\requests\\presentation_request_config_v2.json",
       "launchBrowser": true,
       "environmentVariables": {
-        "presentationRequestConfigFile": "%cd%\\requests\\presentation_request_config_v2.json",
-        "issuanceRequestConfigFile": "%cd%\\requests\\issuance_request_config_v2.json",
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "applicationUrl.0": "https://0.0.0.0:5001,http://0.0.0.0:5002",

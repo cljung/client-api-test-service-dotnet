@@ -22,7 +22,7 @@ namespace client_api_test_service_dotnet
     [ApiController]
     public class ApiVerifierController : ApiBaseVCController
     {
-        protected const string PresentationRequestConfigFile = "presentation_request_config_v2.json";
+        protected const string PresentationRequestConfigFile = "%cd%\\requests\\presentation_request_config_v2.json";
 
         public ApiVerifierController(IConfiguration configuration, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiVerifierController> log) : base(configuration, appSettings, memoryCache, env, log)
         {
@@ -42,9 +42,8 @@ namespace client_api_test_service_dotnet
             string presentationRequestFile = _configuration.GetValue<string>("PresentationRequestConfigFile");
             if (string.IsNullOrEmpty(presentationRequestFile)) {
                 presentationRequestFile = PresentationRequestConfigFile;
-            } else {
-                presentationRequestFile = presentationRequestFile.Replace("%cd%", System.IO.Directory.GetCurrentDirectory() );
-            }
+            } 
+            presentationRequestFile = presentationRequestFile.Replace("%cd%", System.IO.Directory.GetCurrentDirectory() );
             if (!System.IO.File.Exists(presentationRequestFile)) {
                 _log.LogError( "File not found: {0}", presentationRequestFile );
                 return null;

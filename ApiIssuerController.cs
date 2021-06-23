@@ -22,7 +22,7 @@ namespace client_api_test_service_dotnet
     [ApiController]
     public class ApiIssuerController : ApiBaseVCController
     {
-        private const string IssuanceRequestConfigFile = "issuance_request_config_v2.json";
+        private const string IssuanceRequestConfigFile = "%cd%\\requests\\issuance_request_config_v2.json";
 
         public ApiIssuerController(IConfiguration configuration, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiIssuerController> log) : base(configuration, appSettings, memoryCache, env, log)
         {
@@ -42,10 +42,8 @@ namespace client_api_test_service_dotnet
             string issuanceRequestFile = _configuration.GetValue<string>("IssuanceRequestConfigFile");
             if (string.IsNullOrEmpty(issuanceRequestFile)) {
                 issuanceRequestFile = IssuanceRequestConfigFile;
-            } else {
-                issuanceRequestFile = issuanceRequestFile.Replace("%cd%", System.IO.Directory.GetCurrentDirectory() );
             }
-
+            issuanceRequestFile = issuanceRequestFile.Replace("%cd%", System.IO.Directory.GetCurrentDirectory() );
             if (!System.IO.File.Exists(issuanceRequestFile)) {
                 _log.LogError("File not found: {0}", issuanceRequestFile);
                 return null;
