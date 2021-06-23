@@ -40,8 +40,12 @@ namespace client_api_test_service_dotnet
             }
             // see if file path was passed on command line
             string issuanceRequestFile = _configuration.GetValue<string>("IssuanceRequestConfigFile");
-            if (string.IsNullOrEmpty(issuanceRequestFile))
+            if (string.IsNullOrEmpty(issuanceRequestFile)) {
                 issuanceRequestFile = IssuanceRequestConfigFile;
+            } else {
+                issuanceRequestFile = issuanceRequestFile.Replace("%cd%", System.IO.Directory.GetCurrentDirectory() );
+            }
+
             if (!System.IO.File.Exists(issuanceRequestFile)) {
                 _log.LogError("File not found: {0}", issuanceRequestFile);
                 return null;

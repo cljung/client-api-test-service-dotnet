@@ -40,8 +40,11 @@ namespace client_api_test_service_dotnet
             }
             // see if file path was passed on command line
             string presentationRequestFile = _configuration.GetValue<string>("PresentationRequestConfigFile");
-            if (string.IsNullOrEmpty(presentationRequestFile))
-                 presentationRequestFile = PresentationRequestConfigFile;
+            if (string.IsNullOrEmpty(presentationRequestFile)) {
+                presentationRequestFile = PresentationRequestConfigFile;
+            } else {
+                presentationRequestFile = presentationRequestFile.Replace("%cd%", System.IO.Directory.GetCurrentDirectory() );
+            }
             if (!System.IO.File.Exists(presentationRequestFile)) {
                 _log.LogError( "File not found: {0}", presentationRequestFile );
                 return null;
