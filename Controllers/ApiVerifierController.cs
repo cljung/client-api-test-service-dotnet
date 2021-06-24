@@ -27,7 +27,7 @@ namespace AA.DIDApi.Controllers
             ILogger<ApiVerifierController> log) 
                 : base(configuration, appSettings, memoryCache, env, log)
         {
-            GetPresentationRequest();
+            GetPresentationRequest().GetAwaiter().GetResult();
         }
 
         #region Endpoints
@@ -78,7 +78,7 @@ namespace AA.DIDApi.Controllers
 
             try 
             {
-                JObject presentationRequest = GetPresentationRequest();
+                JObject presentationRequest = await GetPresentationRequest();
                 if ( presentationRequest == null)
                 {
                     return ReturnErrorMessage( "Presentation Request Config File not found" );
@@ -92,28 +92,26 @@ namespace AA.DIDApi.Controllers
 
                 // set details about where we want the VC Client API callback
                 var callback = presentationRequest["callback"];
-                callback["url"] = string.Format("{0}/presentationCallback", GetApiPath());
+                callback["url"] = $"{GetApiPath()}/presentationCallback";
                 callback["state"] = correlationId;
                 callback["nounce"] = Guid.NewGuid().ToString();
                 callback["headers"]["my-api-key"] = this.AppSettings.ApiKey;
 
                 string jsonString = JsonConvert.SerializeObject(presentationRequest);
-                _log.LogTrace( "VC Client API Request\n{0}", jsonString );
-
-                HttpStatusCode statusCode = HttpStatusCode.OK;
-                if ( !HttpPost(jsonString, out statusCode, out string contents))
+                HttpActionResponse httpPostResponse = await HttpPostAsync(jsonString);
+                if (!httpPostResponse.IsSuccessStatusCode)
                 {
-                    _log.LogError("VC Client API Error Response\n{0}", contents);
-                    return ReturnErrorMessage( contents );
+                    _log.LogError($"VC Client API Error Response\n{httpPostResponse.ResponseContent}\n{httpPostResponse.StatusCode}");
+                    return ReturnErrorMessage(httpPostResponse.ResponseContent);
                 }
 
                 // pass the response to our caller (but add id)
-                JObject apiResp = JObject.Parse(contents);
+                JObject apiResp = JObject.Parse(httpPostResponse.ResponseContent);
                 apiResp.Add(new JProperty("id", correlationId));
-                contents = JsonConvert.SerializeObject(apiResp);
-                _log.LogTrace("VC Client API Response\n{0}", contents);
+                httpPostResponse.ResponseContent = JsonConvert.SerializeObject(apiResp);
                 
-                return ReturnJson( contents );
+                _log.LogTrace($"VC Client API Response\n{httpPostResponse.ResponseContent}");
+                return ReturnJson(httpPostResponse.ResponseContent);
             }
             catch(Exception ex)
             {
@@ -128,7 +126,7 @@ namespace AA.DIDApi.Controllers
 
             try 
             {
-                string body = GetRequestBody();
+                string body = await GetRequestBodyAsync();
                 _log.LogTrace(body);
                 JObject presentationResponse = JObject.Parse(body);
                 string correlationId = presentationResponse["state"].ToString();
@@ -150,13 +148,13 @@ namespace AA.DIDApi.Controllers
                 if (presentationResponse["code"].ToString() == "presentation_verified")
                 {
                     var claims = presentationResponse["issuers"][0]["claims"];
-                    _log.LogTrace("presentationCallback() - presentation_verified\n{0}", claims);
+                    _log.LogTrace($"presentationCallback() - presentation_verified\n{claims}");
 
                     // build a displayName so we can tell the called who presented their VC
                     JObject vcClaims = (JObject)presentationResponse["issuers"][0]["claims"];
                     string displayName = vcClaims.ContainsKey("displayName")
                         ? vcClaims["displayName"].ToString()
-                        : string.Format("{0} {1}", vcClaims["firstName"], vcClaims["lastName"]);
+                        : $"{vcClaims["firstName"]} {vcClaims["lastName"]}";
 
                     var cacheData = new
                     {
@@ -190,7 +188,7 @@ namespace AA.DIDApi.Controllers
                 JObject cacheData = null;
                 if(GetCachedJsonObject(correlationId, out cacheData))
                 { 
-                    _log.LogTrace( $"status={cacheData["status"].ToString()}, message={cacheData["message"].ToString()}" );
+                    _log.LogTrace( $"status={cacheData["status"]}, message={cacheData["message"]}" );
                     //RemoveCacheValue( state ); // if you're not using B2C integration, uncomment this line
                     return ReturnJson(TransformCacheDataToBrowserResponse(cacheData));
                 }
@@ -209,7 +207,7 @@ namespace AA.DIDApi.Controllers
         
             try
             {
-                string body = GetRequestBody();
+                string body = await GetRequestBodyAsync();
                 _log.LogTrace(body);
                 JObject b2cRequest = JObject.Parse(body);
                 string correlationId = b2cRequest["id"].ToString();
@@ -245,7 +243,7 @@ namespace AA.DIDApi.Controllers
                 JObject vc = JWTTokenToJObject(vcToken);
                 string displayName = vcClaims.ContainsKey("displayName")
                     ? vcClaims["displayName"].ToString()
-                    : string.Format("{0} {1}", vcClaims["firstName"], vcClaims["lastName"]);
+                    : $"{vcClaims["firstName"]} {vcClaims["lastName"]}";
 
                 // these claims are optional
                 string sub = null;
@@ -297,10 +295,10 @@ namespace AA.DIDApi.Controllers
 
         protected string GetApiPath()
         {
-            return string.Format("{0}/api/verifier", GetRequestHostName());
+            return $"{GetRequestHostName()}/api/verifier";
         }
 
-        protected JObject GetPresentationRequest()
+        protected async Task<JObject> GetPresentationRequest()
         {
             if (GetCachedValue("presentationRequest", out string json))
             {
@@ -316,23 +314,24 @@ namespace AA.DIDApi.Controllers
 
             if (!System.IO.File.Exists(presentationRequestFile))
             {
-                _log.LogError("File not found: {0}", presentationRequestFile);
+                _log.LogError($"File not found: {presentationRequestFile}");
                 return null;
             }
 
-            _log.LogTrace("PresentationRequest file: {0}", presentationRequestFile);
+            _log.LogTrace($"PresentationRequest file: {presentationRequestFile}");
             json = System.IO.File.ReadAllText(presentationRequestFile);
             JObject config = JObject.Parse(json);
 
             // download manifest and cache it
-            HttpStatusCode statusCode = HttpStatusCode.OK;
-            if (!HttpGet(config["presentation"]["requestedCredentials"][0]["manifest"].ToString(), out statusCode, out string contents))
+            HttpActionResponse httpGetResponse = await HttpGetAsync(config["issuance"]["manifest"].ToString());
+            if (!httpGetResponse.IsSuccessStatusCode) 
             {
-                _log.LogError("HttpStatus {0} fetching manifest {1}", statusCode, config["presentation"]["requestedCredentials"][0]["manifest"].ToString());
+                _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["presentation"]["requestedCredentials"][0]["manifest"]}");
                 return null;
             }
-            CacheValueWithNoExpiration("manifestPresentation", contents);
-            JObject manifest = JObject.Parse(contents);
+
+            CacheValueWithNoExpiration("manifestPresentation", httpGetResponse.ResponseContent);
+            JObject manifest = JObject.Parse(httpGetResponse.ResponseContent);
 
             // update presentationRequest from manifest with things that don't change for each request
             if (!config["authority"].ToString().StartsWith("did:ion:"))
@@ -357,7 +356,7 @@ namespace AA.DIDApi.Controllers
         {
             if (GetCachedValue("manifestPresentation", out string json))
             {
-                return JObject.Parse(json); ;
+                return JObject.Parse(json);
             }
             return null;
         }

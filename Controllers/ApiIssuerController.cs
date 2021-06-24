@@ -28,7 +28,7 @@ namespace AA.DIDApi.Controllers
             ILogger<ApiIssuerController> log) 
                 : base(configuration, appSettings, memoryCache, env, log)
         {
-            GetIssuanceRequest();
+            GetIssuanceRequest().GetAwaiter().GetResult();
         }
 
         #region Endpoints
@@ -37,9 +37,10 @@ namespace AA.DIDApi.Controllers
         public async Task<ActionResult> Echo() 
         {
             TraceHttpRequest();
+         
             try 
             {
-                JObject config = GetIssuanceRequest();
+                JObject config = await GetIssuanceRequest();
                 JObject manifest = GetIssuanceManifest();
                 var info = new
                 {
@@ -67,16 +68,19 @@ namespace AA.DIDApi.Controllers
         public async Task<ActionResult> GetLogo()
         {
             TraceHttpRequest();
+
             JObject manifest = GetIssuanceManifest();
             return Redirect(manifest["display"]["card"]["logo"]["uri"].ToString());
         }
 
         [HttpGet("/api/issuer/issue-request")]
-        public async Task<ActionResult> GetIssuanceReference() {
+        public async Task<ActionResult> GetIssuanceReference()
+        {
             TraceHttpRequest();
+
             try 
             {
-                JObject issuanceRequest = GetIssuanceRequest();
+                JObject issuanceRequest = await GetIssuanceRequest();
                 if (issuanceRequest == null) 
                 {
                     return ReturnErrorMessage("Issuance Request Config File not found");
@@ -92,7 +96,7 @@ namespace AA.DIDApi.Controllers
                 }
 
                 string correlationId = Guid.NewGuid().ToString();
-                issuanceRequest["callback"]["url"] = string.Format("{0}/issuanceCallback", GetApiPath());
+                issuanceRequest["callback"]["url"] = $"{GetApiPath()}/issuanceCallback";
                 issuanceRequest["callback"]["state"] = correlationId;
                 issuanceRequest["callback"]["nounce"] = Guid.NewGuid().ToString();
                 issuanceRequest["callback"]["headers"]["my-api-key"] = this.AppSettings.ApiKey;
@@ -107,21 +111,20 @@ namespace AA.DIDApi.Controllers
                         int pinMaxValue = int.Parse("".PadRight( pinLength, '9'));          // 9999999
                         int randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
                         pin = string.Format("{0:D" + pinLength.ToString() + "}", randomNumber);
-                        _log.LogTrace("pin={0}", pin);
+                        _log.LogTrace($"pin={pin}");
                         issuanceRequest["issuance"]["pin"]["value"] = pin;
                     }
                 }
 
                 string jsonString = JsonConvert.SerializeObject(issuanceRequest);
-                _log.LogTrace("VC Client API Request\n{0}", jsonString);
-                HttpStatusCode statusCode = HttpStatusCode.OK;
-                if(!HttpPost(jsonString, out statusCode, out string contents))
+                HttpActionResponse httpPostResponse = await HttpPostAsync(jsonString);
+                if (!httpPostResponse.IsSuccessStatusCode)
                 {
-                    _log.LogError("VC Client API Error Response\n{0}", contents);
-                    return ReturnErrorMessage( contents );
+                    _log.LogError($"VC Client API Error Response\n{httpPostResponse.ResponseContent}\n{httpPostResponse.StatusCode}");
+                    return ReturnErrorMessage(httpPostResponse.ResponseContent);
                 }
                 
-                JObject requestConfig = JObject.Parse(contents);
+                JObject requestConfig = JObject.Parse(httpPostResponse.ResponseContent);
                 if(pinLength > 0)
                 {
                     requestConfig["pin"] = pin;
@@ -129,9 +132,9 @@ namespace AA.DIDApi.Controllers
 
                 requestConfig.Add(new JProperty("id", correlationId));
                 jsonString = JsonConvert.SerializeObject(requestConfig);
-                _log.LogTrace("VC Client API Response\n{0}", jsonString);
+                _log.LogTrace($"VC Client API Response\n{jsonString}");
             
-                return ReturnJson( jsonString );
+                return ReturnJson(jsonString );
             }  
             catch (Exception ex)
             {
@@ -140,12 +143,14 @@ namespace AA.DIDApi.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> PostIssuanceCallback() {
+        public async Task<ActionResult> PostIssuanceCallback()
+        {
             TraceHttpRequest();
+
             try 
             {
                 _log.LogTrace("issuanceCallback");
-                string body = GetRequestBody();
+                string body = await GetRequestBodyAsync();
                 _log.LogTrace(body);
                 JObject issuanceResponse = JObject.Parse(body);
             
@@ -159,6 +164,7 @@ namespace AA.DIDApi.Controllers
                     };
                     CacheJsonObjectWithExpiration(correlationId, cacheData);
                 }
+
                 return new OkResult();
             } 
             catch (Exception ex)
@@ -168,12 +174,14 @@ namespace AA.DIDApi.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult> PostResponse() {
+        public async Task<ActionResult> PostResponse()
+        {
             TraceHttpRequest();
+
             try 
             {
                 _log.LogTrace("response");
-                string body = GetRequestBody();
+                string body = await GetRequestBodyAsync();
                 JObject claims = JObject.Parse(body);
                 CacheJsonObjectWithExpiration(claims["state"].ToString(), claims);
                 return new OkResult();
@@ -185,11 +193,13 @@ namespace AA.DIDApi.Controllers
         }
 
         [HttpGet("/api/issuer/issue-response")]
-        public async Task<ActionResult> GetIssuanceResponse() {
+        public async Task<ActionResult> GetIssuanceResponse()
+        {
             TraceHttpRequest();
+
             try 
             {
-                string correlationId = this.Request.Query["id"];
+                string correlationId = Request.Query["id"];
                 if (string.IsNullOrEmpty(correlationId))
                 {
                     return ReturnErrorMessage("Missing argument 'id'");
@@ -201,6 +211,7 @@ namespace AA.DIDApi.Controllers
                     RemoveCacheValue(correlationId);
                     return ReturnJson(body);
                 }
+
                 return new OkResult();
             } 
             catch (Exception ex)
@@ -215,13 +226,12 @@ namespace AA.DIDApi.Controllers
 
         protected string GetApiPath()
         {
-            return string.Format("{0}/api/issuer", GetRequestHostName());
+            return $"{GetRequestHostName()}/api/issuer";
         }
 
-        protected JObject GetIssuanceRequest()
+        protected async Task<JObject> GetIssuanceRequest()
         {
-            string json;
-            if (GetCachedValue("issuanceRequest", out json))
+            if (GetCachedValue("issuanceRequest", out string json))
             {
                 return JObject.Parse(json);
             }
@@ -235,24 +245,24 @@ namespace AA.DIDApi.Controllers
 
             if (!System.IO.File.Exists(issuanceRequestFile))
             {
-                _log.LogError("File not found: {0}", issuanceRequestFile);
+                _log.LogError($"File not found: {issuanceRequestFile}");
                 return null;
             }
 
-            _log.LogTrace("IssuanceRequest file: {0}", issuanceRequestFile);
+            _log.LogTrace($"IssuanceRequest file: {issuanceRequestFile}");
             json = System.IO.File.ReadAllText(issuanceRequestFile);
             JObject config = JObject.Parse(json);
 
             // download manifest and cache it
-            HttpStatusCode statusCode = HttpStatusCode.OK;
-            if (!HttpGet(config["issuance"]["manifest"].ToString(), out statusCode, out string contents))
+            HttpActionResponse httpGetResponse = await HttpGetAsync(config["issuance"]["manifest"].ToString());
+            if (!httpGetResponse.IsSuccessStatusCode)
             {
-                _log.LogError("HttpStatus {0} fetching manifest {1}", statusCode, config["issuance"]["manifest"].ToString());
+                _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["issuance"]["manifest"]}");
                 return null;
             }
 
-            CacheValueWithNoExpiration("manifestIssuance", contents);
-            JObject manifest = JObject.Parse(contents);
+            CacheValueWithNoExpiration("manifestIssuance", httpGetResponse.ResponseContent);
+            JObject manifest = JObject.Parse(httpGetResponse.ResponseContent);
 
             // update presentationRequest from manifest with things that don't change for each request
             if (!config["authority"].ToString().StartsWith("did:ion:"))

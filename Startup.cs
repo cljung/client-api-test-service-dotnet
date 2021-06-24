@@ -48,9 +48,8 @@ namespace AA.DIDApi
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            Console.WriteLine("IssuanceRequestConfigFile={0}\nPresentationRequestConfigFile={1}"
-                    , Environment.GetEnvironmentVariable("IssuanceRequestConfigFile")
-                    , Environment.GetEnvironmentVariable("PresentationRequestConfigFile"));
+            Console.WriteLine($"IssuanceRequestConfigFile={Environment.GetEnvironmentVariable("IssuanceRequestConfigFile")}\n" +
+                $"PresentationRequestConfigFile={Environment.GetEnvironmentVariable("PresentationRequestConfigFile")}");
             if(env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();

@@ -9,9 +9,10 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Net;
+using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace AA.DIDApi.Controllers
 {
@@ -37,13 +38,14 @@ namespace AA.DIDApi.Controllers
             _configuration = configuration;
         }
 
-        protected string GetRequestHostName() {
-            string scheme = "https";// : this.Request.Scheme;
-            string originalHost = this.Request.Headers["x-original-host"];
+        protected string GetRequestHostName()
+        {
+            string scheme = "https"; // : this.Request.Scheme;
+            string originalHost = Request.Headers["x-original-host"];
 
             return !string.IsNullOrEmpty(originalHost)
-                ? string.Format("{0}://{1}", scheme, originalHost)
-                : string.Format("{0}://{1}", scheme, this.Request.Host);
+                ? $"{scheme}://{originalHost}"
+                : $"{scheme}://{Request.Host}";
         }
 
         // return 400 error-message
@@ -74,47 +76,51 @@ namespace AA.DIDApi.Controllers
         }
 
         // POST to VC Client API
-        protected bool HttpPost(string body, out HttpStatusCode statusCode, out string response)
+        protected async Task<HttpActionResponse> HttpPostAsync(string body)
         {
-            using HttpClient client = new HttpClient();
-            using HttpResponseMessage res = client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json")).Result;
-            response = res.Content.ReadAsStringAsync().Result;
+            _log.LogTrace($"POST request initializing\n{body}");
 
-            statusCode = res.StatusCode;
-            return res.IsSuccessStatusCode;
+            using HttpClient client = new HttpClient();
+            using HttpResponseMessage res = await client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json"));
+            string response = res.Content.ReadAsStringAsync().Result;
+
+            return new HttpActionResponse
+            {
+                StatusCode = res.StatusCode,
+                IsSuccessStatusCode = res.IsSuccessStatusCode,
+                ResponseContent = response
+            };
         }
 
         // GET
-        protected bool HttpGet(string url, out HttpStatusCode statusCode, out string response)
+        protected async Task<HttpActionResponse> HttpGetAsync(string url)
         {
             using HttpClient client = new HttpClient();
-            using HttpResponseMessage res = client.GetAsync( url ).Result;
-            response = res.Content.ReadAsStringAsync().Result;
+            using HttpResponseMessage res = await client.GetAsync(url);
+            string response = await res.Content.ReadAsStringAsync();
 
-            statusCode = res.StatusCode;
-            return res.IsSuccessStatusCode;
+            return new HttpActionResponse
+            {
+                StatusCode = res.StatusCode,
+                IsSuccessStatusCode = res.IsSuccessStatusCode,
+                ResponseContent = response
+            };
         }
 
         protected void TraceHttpRequest()
         {
-            string xForwardedFor = this.Request.Headers["X-Forwarded-For"];
+            string xForwardedFor = Request.Headers["X-Forwarded-For"];
             string ipaddr = !string.IsNullOrEmpty(xForwardedFor)
                 ? xForwardedFor
                 : HttpContext.Connection.RemoteIpAddress.ToString(); 
             
-            _log.LogTrace("{0} {1} -> {2} {3}://{4}{5}{6}", 
-                DateTime.UtcNow.ToString("o"),
-                ipaddr, 
-                this.Request.Method,
-                this.Request.Scheme,
-                this.Request.Host,
-                this.Request.Path,
-                this.Request.QueryString);
+            _log.LogTrace($"{DateTime.UtcNow:o} {ipaddr} -> {Request.Method} {Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
         }
 
-        protected string GetRequestBody()
+        protected async Task<string> GetRequestBodyAsync()
         {
-            return new System.IO.StreamReader(this.Request.Body).ReadToEndAsync().Result;
+            using StreamReader reader = new StreamReader(Request.Body);
+            return await reader.ReadToEndAsync();
         }
 
         protected JObject JWTTokenToJObject(string token)
@@ -148,12 +154,6 @@ namespace AA.DIDApi.Controllers
         {
             _cache.Set(key, JsonConvert.SerializeObject(jsonObject), DateTimeOffset.Now.AddSeconds(this.AppSettings.CacheExpiresInSeconds));
         }
-
-        // Not used
-        //protected void CacheValueWithExpiration(string key, string value)
-        //{
-        //    _cache.Set(key, value, DateTimeOffset.Now.AddSeconds(this.AppSettings.CacheExpiresInSeconds));
-        //}
 
         protected void CacheValueWithNoExpiration(string key, string value)
         {
