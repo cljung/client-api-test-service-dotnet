@@ -8,12 +8,11 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Net;
 using System.Threading.Tasks;
 
 namespace AA.DIDApi.Controllers
 {
-    [Route("api/verifier/[action]")]
+    [Route("api/verifier")]
     [ApiController]
     public class ApiVerifierController : ApiBaseVCController
     {
@@ -24,7 +23,7 @@ namespace AA.DIDApi.Controllers
             IOptions<AppSettingsModel> appSettings,
             IMemoryCache memoryCache,
             IWebHostEnvironment env,
-            ILogger<ApiVerifierController> log) 
+            ILogger<ApiVerifierController> log)
                 : base(configuration, appSettings, memoryCache, env, log)
         {
             GetPresentationRequest().GetAwaiter().GetResult();
@@ -32,8 +31,8 @@ namespace AA.DIDApi.Controllers
 
         #region Endpoints
 
-        [HttpGet]
-        public async Task<ActionResult> Echo()
+        [HttpGet("echo")]
+        public ActionResult Echo()
         {
             TraceHttpRequest();
 
@@ -62,16 +61,16 @@ namespace AA.DIDApi.Controllers
         }
 
         [HttpGet]
-        [Route("/api/verifier/logo.png")]
-        public async Task<ActionResult> GetLogo()
+        [Route("logo.png")]
+        public ActionResult GetLogo()
         {
             TraceHttpRequest();
 
             JObject manifest = GetPresentationManifest();
-            return Redirect( manifest["display"]["card"]["logo"]["uri"].ToString() );
+            return Redirect(manifest["display"]["card"]["logo"]["uri"].ToString());
         }
 
-        [HttpGet("/api/verifier/presentation-request")]
+        [HttpGet("presentation-request")]
         public async Task<ActionResult> GetPresentationReference()
         {
             TraceHttpRequest();
@@ -81,7 +80,7 @@ namespace AA.DIDApi.Controllers
                 JObject presentationRequest = await GetPresentationRequest();
                 if ( presentationRequest == null)
                 {
-                    return ReturnErrorMessage( "Presentation Request Config File not found" );
+                    return ReturnErrorMessage("Presentation Request Config File not found");
                 }
                 
                 // The 'state' variable is the identifier between the Browser session, this API and VC client API doing the validation.
@@ -119,7 +118,7 @@ namespace AA.DIDApi.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("presentationCallback")]
         public async Task<ActionResult> PostPresentationCallback()
         {
             TraceHttpRequest();
@@ -141,7 +140,7 @@ namespace AA.DIDApi.Controllers
                         status = 1,
                         message = "QR Code is scanned. Waiting for validation..."
                     };
-                    CacheJsonObjectWithExpiration( correlationId, cacheData );
+                    CacheJsonObjectWithExpiration(correlationId, cacheData);
                 }
 
                 // presentation_verified == The VC Client API has received and validateed the presented VC
@@ -163,16 +162,19 @@ namespace AA.DIDApi.Controllers
                         presentationResponse = presentationResponse
                     };
                     
-                    CacheJsonObjectWithExpiration(correlationId, cacheData );
+                    CacheJsonObjectWithExpiration(correlationId, cacheData);
                 }
+
                 return new OkResult();
-            } catch (Exception ex) {
+            } 
+            catch (Exception ex)
+            {
                 return ReturnErrorMessage(ex.Message);
             }
         }
 
-        [HttpGet("/api/verifier/presentation-response-status")]
-        public async Task<ActionResult> PostPresentationResponse()
+        [HttpGet("presentation-response-status")]
+        public ActionResult PostPresentationResponse()
         {
             TraceHttpRequest();
         
@@ -184,23 +186,23 @@ namespace AA.DIDApi.Controllers
                 {
                     return ReturnErrorMessage("Missing argument 'id'");
                 }
-                
-                JObject cacheData = null;
-                if(GetCachedJsonObject(correlationId, out cacheData))
-                { 
-                    _log.LogTrace( $"status={cacheData["status"]}, message={cacheData["message"]}" );
-                    //RemoveCacheValue( state ); // if you're not using B2C integration, uncomment this line
+
+                if (GetCachedJsonObject(correlationId, out JObject cacheData))
+                {
+                    _log.LogTrace($"status={cacheData["status"]}, message={cacheData["message"]}");
+                    //RemoveCacheValue(state); // if you're not using B2C integration, uncomment this line
                     return ReturnJson(TransformCacheDataToBrowserResponse(cacheData));
                 }
+
                 return new OkResult();
             }
             catch (Exception ex)
             {
-                return ReturnErrorMessage( ex.Message );
+                return ReturnErrorMessage(ex.Message);
             }
         }
 
-        [HttpPost("/api/verifier/presentation-response-b2c")]
+        [HttpPost("presentation-response-b2c")]
         public async Task<ActionResult> PostPresentationResponseB2C()
         {
             TraceHttpRequest();
@@ -215,13 +217,12 @@ namespace AA.DIDApi.Controllers
                 {
                     return ReturnErrorMessage("Missing argument 'id'");
                 }
-                
-                JObject cacheData = null;
-                if(!GetCachedJsonObject(correlationId, out cacheData))
-                { 
+
+                if (!GetCachedJsonObject(correlationId, out JObject cacheData))
+                {
                     return ReturnErrorB2C("Verifiable Credentials not presented"); // 409
                 }
-                
+
                 // remove cache data now, because if we crash, we don't want to get into an infinite loop of crashing 
                 RemoveCacheValue(correlationId);
 
@@ -323,7 +324,7 @@ namespace AA.DIDApi.Controllers
             JObject config = JObject.Parse(json);
 
             // download manifest and cache it
-            HttpActionResponse httpGetResponse = await HttpGetAsync(config["issuance"]["manifest"].ToString());
+            HttpActionResponse httpGetResponse = await HttpGetAsync(config["presentation"]["requestedCredentials"][0]["manifest"].ToString());
             if (!httpGetResponse.IsSuccessStatusCode) 
             {
                 _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["presentation"]["requestedCredentials"][0]["manifest"]}");
