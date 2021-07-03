@@ -8,13 +8,12 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Net;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace AA.DIDApi.Controllers
 {
-    [Route("api/issuer/[action]")]
+    [Route("api/issuer")]
     [ApiController]
     public class ApiIssuerController : ApiBaseVCController
     {
@@ -33,8 +32,8 @@ namespace AA.DIDApi.Controllers
 
         #region Endpoints
 
-        [HttpGet]
-        public async Task<ActionResult> Echo() 
+        [HttpGet("echo")]
+        public async Task<ActionResult> Echo()
         {
             TraceHttpRequest();
          
@@ -64,8 +63,8 @@ namespace AA.DIDApi.Controllers
         }
 
         [HttpGet]
-        [Route("/api/issuer/logo.png")]
-        public async Task<ActionResult> GetLogo()
+        [Route("logo.png")]
+        public ActionResult GetLogo()
         {
             TraceHttpRequest();
 
@@ -73,7 +72,7 @@ namespace AA.DIDApi.Controllers
             return Redirect(manifest["display"]["card"]["logo"]["uri"].ToString());
         }
 
-        [HttpGet("/api/issuer/issue-request")]
+        [HttpGet("issue-request")]
         public async Task<ActionResult> GetIssuanceReference()
         {
             TraceHttpRequest();
@@ -108,7 +107,7 @@ namespace AA.DIDApi.Controllers
                     int.TryParse(issuanceRequest["issuance"]["pin"]["length"].ToString(), out pinLength);
                     if (pinLength > 0)
                     {
-                        int pinMaxValue = int.Parse("".PadRight( pinLength, '9'));          // 9999999
+                        int pinMaxValue = int.Parse("".PadRight(pinLength, '9'));          // 9999999
                         int randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
                         pin = string.Format("{0:D" + pinLength.ToString() + "}", randomNumber);
                         _log.LogTrace($"pin={pin}");
@@ -134,15 +133,15 @@ namespace AA.DIDApi.Controllers
                 jsonString = JsonConvert.SerializeObject(requestConfig);
                 _log.LogTrace($"VC Client API Response\n{jsonString}");
             
-                return ReturnJson(jsonString );
+                return ReturnJson(jsonString);
             }  
             catch (Exception ex)
             {
-                return ReturnErrorMessage( ex.Message );
+                return ReturnErrorMessage(ex.Message);
             }
         }
 
-        [HttpPost]
+        [HttpPost("issuanceCallback")]
         public async Task<ActionResult> PostIssuanceCallback()
         {
             TraceHttpRequest();
@@ -173,7 +172,7 @@ namespace AA.DIDApi.Controllers
             }
         }
 
-        [HttpPost]
+        [HttpPost("response")]
         public async Task<ActionResult> PostResponse()
         {
             TraceHttpRequest();
@@ -188,12 +187,12 @@ namespace AA.DIDApi.Controllers
             }
             catch(Exception ex) 
             {
-                return ReturnErrorMessage( ex.Message );
+                return ReturnErrorMessage(ex.Message);
             }
         }
 
-        [HttpGet("/api/issuer/issue-response")]
-        public async Task<ActionResult> GetIssuanceResponse()
+        [HttpGet("issue-response")]
+        public ActionResult GetIssuanceResponse()
         {
             TraceHttpRequest();
 
@@ -205,8 +204,7 @@ namespace AA.DIDApi.Controllers
                     return ReturnErrorMessage("Missing argument 'id'");
                 }
                 
-                string body = null;
-                if(GetCachedValue(correlationId, out body))
+                if(GetCachedValue(correlationId, out string body))
                 {
                     RemoveCacheValue(correlationId);
                     return ReturnJson(body);
@@ -269,12 +267,11 @@ namespace AA.DIDApi.Controllers
             {
                 config["authority"] = manifest["input"]["issuer"];
             }
-            config["registration"]["clientName"] = AppSettings.client_name;
-
             if (config["issuance"]["type"].ToString().Length == 0)
             {
                 config["issuance"]["type"] = manifest["id"];
             }
+            config["registration"]["clientName"] = AppSettings.client_name;
 
             // if we have pin code but length is zero, remove it since VC Client API will give error then
             if (((JObject)config["issuance"]).ContainsKey("pin"))

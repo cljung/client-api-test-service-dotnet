@@ -59,7 +59,7 @@ namespace AA.DIDApi.Controllers
         }
 
         // return 200 json 
-        protected ActionResult ReturnJson( string json )
+        protected ActionResult ReturnJson(string json)
         {
             return new ContentResult { ContentType = "application/json", Content = json };
         }

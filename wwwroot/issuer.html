@@ -94,7 +94,7 @@
                                 })
 
                             var checkStatus = setInterval(function () {
-                                fetch('api/issuer/issue-response?id=' + respIssuanceReq.id )
+                                fetch('api/issuer/issue-response?id=' + respIssuanceReq.id)
                                     .then(response => response.text())
                                     .catch(error => document.getElementById("message").innerHTML = error)
                                     .then(response => {
@@ -119,7 +119,6 @@
                                         }
                                     })
                             }, 3000);
-
                         })
 
                         var selfAssertedClaims;
