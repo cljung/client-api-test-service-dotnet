@@ -327,11 +327,11 @@ namespace AA.DIDApi.Controllers
             string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
             _log.LogInformation($"FileLocation: {fileLocation}");
             string file = $"{fileLocation}\\{presentationRequestFile}";
-            if (!System.IO.File.Exists(file))
-            {
-                _log.LogError($"File not found: {presentationRequestFile}");
-                return null;
-            }
+            //if (!System.IO.File.Exists(file))
+            //{
+            //    _log.LogError($"File not found: {presentationRequestFile}");
+            //    return null;
+            //}
 
             _log.LogTrace($"PresentationRequest file: {presentationRequestFile}");
             json = System.IO.File.ReadAllText(file);
