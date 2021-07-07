@@ -79,10 +79,13 @@ namespace AA.DIDApi.Controllers
             try 
             {
                 JObject presentationRequest = null;
+                string fileLocation = string.Empty;
                 string exception = string.Empty;
                 try
                 {
-                    presentationRequest = await GetPresentationRequest();
+                    var result = await GetPresentationRequest();
+                    presentationRequest = result.Item1;
+                    fileLocation = result.Item2;
                 }
                 catch (Exception ex)
                 {
@@ -90,7 +93,7 @@ namespace AA.DIDApi.Controllers
                 }
                 if (presentationRequest == null)
                 {
-                    return ReturnErrorMessage($"Presentation Request Config File not found: {exception}");
+                    return ReturnErrorMessage($"Presentation Request Config File not found: file:'{fileLocation}' ex:'{exception}'");
                 }
                 
                 // The 'state' variable is the identifier between the Browser session, this API and VC client API doing the validation.
@@ -309,12 +312,12 @@ namespace AA.DIDApi.Controllers
             return $"{GetRequestHostName()}/api/verifier";
         }
 
-        protected async Task<JObject> GetPresentationRequest()
+        protected async Task<Tuple<JObject, string>> GetPresentationRequest()
         {
             if (GetCachedValue("presentationRequest", out string json))
             {
                 _log.LogInformation($"presentationRequest retrieved from Cache: {json}");
-                return JObject.Parse(json);
+                return new Tuple<JObject, string>(JObject.Parse(json), null);
             }
 
             // see if file path was passed on command line
@@ -327,11 +330,11 @@ namespace AA.DIDApi.Controllers
             string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
             _log.LogInformation($"FileLocation: {fileLocation}");
             string file = $"{fileLocation}\\{presentationRequestFile}";
-            //if (!System.IO.File.Exists(file))
-            //{
-            //    _log.LogError($"File not found: {presentationRequestFile}");
-            //    return null;
-            //}
+            if (!System.IO.File.Exists(file))
+            {
+                _log.LogError($"File not found: {presentationRequestFile}");
+                return new Tuple<JObject, string>(null, file);
+            }
 
             _log.LogTrace($"PresentationRequest file: {presentationRequestFile}");
             json = System.IO.File.ReadAllText(file);
@@ -346,7 +349,7 @@ namespace AA.DIDApi.Controllers
             if (!httpGetResponse.IsSuccessStatusCode)
             {
                 _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["presentation"]["requestedCredentials"][0]["manifest"]}");
-                return null;
+                return new Tuple<JObject, string>(null, file);
             }
 
             CacheValueWithNoExpiration("manifestPresentation", httpGetResponse.ResponseContent);
@@ -369,7 +372,7 @@ namespace AA.DIDApi.Controllers
             json = JsonConvert.SerializeObject(config);
 
             CacheValueWithNoExpiration("presentationRequest", json);
-            return config;
+            return new Tuple<JObject, string>(config, file);
         }
 
         /*
