@@ -84,8 +84,7 @@ namespace AA.DIDApi.Controllers
                 try
                 {
                     var result = await GetPresentationRequest();
-                    presentationRequest = result.Item1;
-                    fileLocation = result.Item2;
+                    presentationRequest = result;
                 }
                 catch (Exception ex)
                 {
@@ -93,7 +92,7 @@ namespace AA.DIDApi.Controllers
                 }
                 if (presentationRequest == null)
                 {
-                    return ReturnErrorMessage($"Presentation Request Config File not found: file:'{fileLocation}' ex:'{exception}'");
+                    return ReturnErrorMessage($"Presentation Request Config File not found: file: ex:'{exception}'");
                 }
                 
                 // The 'state' variable is the identifier between the Browser session, this API and VC client API doing the validation.
@@ -312,32 +311,33 @@ namespace AA.DIDApi.Controllers
             return $"{GetRequestHostName()}/api/verifier";
         }
 
-        protected async Task<Tuple<JObject, string>> GetPresentationRequest()
+        protected async Task<JObject> GetPresentationRequest()
         {
             if (GetCachedValue("presentationRequest", out string json))
             {
                 _log.LogInformation($"presentationRequest retrieved from Cache: {json}");
-                return new Tuple<JObject, string>(JObject.Parse(json), null);
+                return JObject.Parse(json);
             }
 
-            // see if file path was passed on command line
-            string presentationRequestFile = _configuration.GetValue<string>("PresentationRequestConfigFile");
-            if (string.IsNullOrEmpty(presentationRequestFile))
-            {
-                presentationRequestFile = PresentationRequestConfigFile;
-            }
+            //// see if file path was passed on command line
+            //string presentationRequestFile = _configuration.GetValue<string>("PresentationRequestConfigFile");
+            //if (string.IsNullOrEmpty(presentationRequestFile))
+            //{
+            //    presentationRequestFile = PresentationRequestConfigFile;
+            //}
 
-            string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
-            string file = presentationRequestFile.StartsWith("requests") 
-                ? $"{fileLocation}\\{presentationRequestFile}"
-                : $"{fileLocation}\\requests\\{presentationRequestFile}";
-            if (!System.IO.File.Exists(file))
-            {
-                _log.LogError($"File not found: {presentationRequestFile}");
-                return new Tuple<JObject, string>(null, file);
-            }
+            //string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
+            //string file = presentationRequestFile.StartsWith("requests") 
+            //    ? $"{fileLocation}\\{presentationRequestFile}"
+            //    : $"{fileLocation}\\requests\\{presentationRequestFile}";
+            //if (!System.IO.File.Exists(file))
+            //{
+            //    _log.LogError($"File not found: {presentationRequestFile}");
+            //    return new Tuple<JObject, string>(null, file);
+            //}
 
-            json = System.IO.File.ReadAllText(file);
+            //json = System.IO.File.ReadAllText(file);
+            json = "{\"authority\": \"did:ion:EiD_ZULUvK_3eTfWfq97cc87DeU8J0AEzIaSuFLRAHzXoQ:eyJkZWx0YSI6eyJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljS2V5cyI6W3siaWQiOiJzaWdfY2FiNjVhYTAiLCJwdWJsaWNLZXlKd2siOnsiY3J2Ijoic2VjcDI1NmsxIiwia3R5IjoiRUMiLCJ4IjoiU21xMVZNNXp0RUVpZGpoWE5uckxub3N5TkI2MEVaV05CWXdUY3dQazU3YyIsInkiOiJSeFd3QlNyQjBaWl9MdndKVGpMamRqUEtTMXlZQjgzOUZIckFWUm9EYW9nIn0sInB1cnBvc2VzIjpbImF1dGhlbnRpY2F0aW9uIiwiYXNzZXJ0aW9uTWV0aG9kIl0sInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkifV0sInNlcnZpY2VzIjpbeyJpZCI6ImxpbmtlZGRvbWFpbnMiLCJzZXJ2aWNlRW5kcG9pbnQiOnsib3JpZ2lucyI6WyJodHRwczovL3ZjYXBpZGV2Lndvb2Rncm92ZWRlbW8uY29tLyJdfSwidHlwZSI6IkxpbmtlZERvbWFpbnMifV19fV0sInVwZGF0ZUNvbW1pdG1lbnQiOiJFaUIza0VSRUlwSWdodFp2SUxaemFlMDF1NGtXSVNnWHFqN0lFUFVfUGNBUnJBIn0sInN1ZmZpeERhdGEiOnsiZGVsdGFIYXNoIjoiRWlEcGMtelNRcHJYMGhacDdlMC1QXzhwWjkzdm9EZXhwLVo1ZXVtbFhzN2hQUSIsInJlY292ZXJ5Q29tbWl0bWVudCI6IkVpQWtKOTNBLThyeXF3X0VqSVRuSEpqdkhvZ016N2YtTlRZWXlhOENVMEdYdWcifX0\",\"includeQRCode\": false,\"registration\": {\"clientName\": \"...set at runtime...\"},\"callback\": {\"url\": \"...set at runtime...\",\"nonce\": \"...set at runtime...\",\"state\": \"...set at runtime...\",\"headers\": {\"my-api-key\": \"blabla\"}},\"presentation\": {\"includeReceipt\": true,\"requestedCredentials\": [{\"type\": \"\",\"manifest\": \"https://beta.did.msidentity.com/v1.0/3c32ed40-8a10-465b-8ba4-0b1e86882668/verifiableCredential/contracts/VerifiedCredentialExpert\",\"purpose\": \"the purpose why the verifier asks for a VC\",\"trustedIssuers\": [ \"did-of-the-Issuer-trusted\" ]}]}}";
             JObject config = JObject.Parse(json);
 
             // download manifest and cache it
@@ -345,7 +345,7 @@ namespace AA.DIDApi.Controllers
             if (!httpGetResponse.IsSuccessStatusCode)
             {
                 _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["presentation"]["requestedCredentials"][0]["manifest"]}");
-                return new Tuple<JObject, string>(null, file);
+                return null;
             }
 
             CacheValueWithNoExpiration("manifestPresentation", httpGetResponse.ResponseContent);
@@ -368,7 +368,7 @@ namespace AA.DIDApi.Controllers
             json = JsonConvert.SerializeObject(config);
 
             CacheValueWithNoExpiration("presentationRequest", json);
-            return new Tuple<JObject, string>(config, file);
+            return config;
         }
 
         /*
