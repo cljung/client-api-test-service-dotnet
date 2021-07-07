@@ -328,24 +328,20 @@ namespace AA.DIDApi.Controllers
             }
 
             string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
-            _log.LogInformation($"FileLocation: {fileLocation}");
-            string file = $"{fileLocation}\\{presentationRequestFile}";
+            string file = presentationRequestFile.StartsWith("requests") 
+                ? $"{fileLocation}\\{presentationRequestFile}"
+                : $"{fileLocation}\\requests\\{presentationRequestFile}";
             if (!System.IO.File.Exists(file))
             {
                 _log.LogError($"File not found: {presentationRequestFile}");
                 return new Tuple<JObject, string>(null, file);
             }
 
-            _log.LogTrace($"PresentationRequest file: {presentationRequestFile}");
             json = System.IO.File.ReadAllText(file);
-            _log.LogInformation($"Json read from config: {json}");
             JObject config = JObject.Parse(json);
-            _log.LogInformation($"Config: {config}");
 
             // download manifest and cache it
-            _log.LogInformation($"Executing HttpGetAsync");
             HttpActionResponse httpGetResponse = await HttpGetAsync(config["presentation"]["requestedCredentials"][0]["manifest"].ToString());
-            _log.LogInformation($"HttpGetResponse ResponseContent: {httpGetResponse?.ResponseContent}");
             if (!httpGetResponse.IsSuccessStatusCode)
             {
                 _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["presentation"]["requestedCredentials"][0]["manifest"]}");

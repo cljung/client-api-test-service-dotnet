@@ -4,7 +4,8 @@
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {
-        "presentationRequestConfigFile": "requests\\presentation_request_cljungdemob2c.json",
+        //"presentationRequestConfigFile": "requests\\presentation_request_cljungdemob2c.json",
+        "presentationRequestConfigFile": "requests\\presentation_request_config_v2.json",
         "issuanceRequestConfigFile": "requests\\issuance_request_cljungdemob2c.json",
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
