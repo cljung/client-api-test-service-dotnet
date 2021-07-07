@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace AA.DIDApi.Controllers
@@ -313,14 +314,16 @@ namespace AA.DIDApi.Controllers
                 presentationRequestFile = PresentationRequestConfigFile;
             }
 
-            if (!System.IO.File.Exists(presentationRequestFile))
+            string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
+            string file = $"{fileLocation}\\{presentationRequestFile}";
+            if (!System.IO.File.Exists(file))
             {
                 _log.LogError($"File not found: {presentationRequestFile}");
                 return null;
             }
 
             _log.LogTrace($"PresentationRequest file: {presentationRequestFile}");
-            json = System.IO.File.ReadAllText(presentationRequestFile);
+            json = System.IO.File.ReadAllText(file);
             JObject config = JObject.Parse(json);
 
             // download manifest and cache it

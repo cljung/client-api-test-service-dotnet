@@ -180,6 +180,11 @@ Then, open a separate command prompt and run the following command
 
 ```Powershell
 ngrok http 5002
+
+https://stackoverflow.com/questions/26291006/stop-sharing-a-port-on-ngrok
+taskkill /f /im ngrok.exe
+* find the ngrok process id by $`top` command.
+After that, just run $ `kill -9 {ngrok_id}`
 ```
 
 Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Browse to it.
@@ -196,6 +201,7 @@ Then, open a separate command prompt and run the following command
 
 ```Powershell
 ngrok http 5002
+taskkill /f /im ngrok.exe (to properly kill connection)
 ```
 
 Grab, the url in the ngrok output (like `https://96a139d4199b.ngrok.io`) and Browse to it.

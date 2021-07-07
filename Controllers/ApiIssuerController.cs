@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.IO;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 
@@ -241,14 +242,16 @@ namespace AA.DIDApi.Controllers
                 issuanceRequestFile = IssuanceRequestConfigFile;
             }
 
-            if (!System.IO.File.Exists(issuanceRequestFile))
+            string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
+            string file = $"{fileLocation}\\{issuanceRequestFile}";
+            if (!System.IO.File.Exists(file))
             {
                 _log.LogError($"File not found: {issuanceRequestFile}");
                 return null;
             }
 
             _log.LogTrace($"IssuanceRequest file: {issuanceRequestFile}");
-            json = System.IO.File.ReadAllText(issuanceRequestFile);
+            json = System.IO.File.ReadAllText(file);
             JObject config = JObject.Parse(json);
 
             // download manifest and cache it

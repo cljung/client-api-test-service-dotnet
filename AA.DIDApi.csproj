@@ -9,6 +9,48 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="requests\issuance_request_cljungdemob2c.json" />
+    <Content Remove="requests\issuance_request_config_v2.json" />
+    <Content Remove="requests\issuance_request_fawltytowers2.json" />
+    <Content Remove="requests\issuance_request_fawltytowers2_campuspass.json" />
+    <Content Remove="requests\presentation_request_cljungdemob2c.json" />
+    <Content Remove="requests\presentation_request_config_v2.json" />
+    <Content Remove="requests\presentation_request_fawltytowers2.json" />
+    <Content Remove="requests\presentation_request_fawltytowers2_campuspass.json" />
+    <Content Remove="requests\presentation_request_trueidentity.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="requests\issuance_request_cljungdemob2c.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="requests\issuance_request_config_v2.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="requests\issuance_request_fawltytowers2.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="requests\issuance_request_fawltytowers2_campuspass.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="requests\presentation_request_cljungdemob2c.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="requests\presentation_request_config_v2.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="requests\presentation_request_fawltytowers2.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="requests\presentation_request_fawltytowers2_campuspass.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="requests\presentation_request_trueidentity.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.9" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
