@@ -78,10 +78,19 @@ namespace AA.DIDApi.Controllers
 
             try 
             {
-                JObject presentationRequest = await GetPresentationRequest();
-                if ( presentationRequest == null)
+                JObject presentationRequest = null;
+                string exception = string.Empty;
+                try
                 {
-                    return ReturnErrorMessage("Presentation Request Config File not found");
+                    presentationRequest = await GetPresentationRequest();
+                }
+                catch (Exception ex)
+                {
+                    exception = ex.Message;
+                }
+                if (presentationRequest == null)
+                {
+                    return ReturnErrorMessage($"Presentation Request Config File not found: {exception}");
                 }
                 
                 // The 'state' variable is the identifier between the Browser session, this API and VC client API doing the validation.
@@ -302,73 +311,65 @@ namespace AA.DIDApi.Controllers
 
         protected async Task<JObject> GetPresentationRequest()
         {
-            try
+            if (GetCachedValue("presentationRequest", out string json))
             {
-                if (GetCachedValue("presentationRequest", out string json))
-                {
-                    _log.LogInformation($"presentationRequest retrieved from Cache: {json}");
-                    return JObject.Parse(json);
-                }
-
-                // see if file path was passed on command line
-                string presentationRequestFile = _configuration.GetValue<string>("PresentationRequestConfigFile");
-                if (string.IsNullOrEmpty(presentationRequestFile))
-                {
-                    presentationRequestFile = PresentationRequestConfigFile;
-                }
-
-                string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
-                _log.LogInformation($"FileLocation: {fileLocation}");
-                string file = $"{fileLocation}\\{presentationRequestFile}";
-                if (!System.IO.File.Exists(file))
-                {
-                    _log.LogError($"File not found: {presentationRequestFile}");
-                    return null;
-                }
-
-                _log.LogTrace($"PresentationRequest file: {presentationRequestFile}");
-                json = System.IO.File.ReadAllText(file);
-                _log.LogInformation($"Json read from config: {json}");
-                JObject config = JObject.Parse(json);
-                _log.LogInformation($"Config: {config}");
-
-                // download manifest and cache it
-                _log.LogInformation($"Executing HttpGetAsync");
-                HttpActionResponse httpGetResponse = await HttpGetAsync(config["presentation"]["requestedCredentials"][0]["manifest"].ToString());
-                _log.LogInformation($"HttpGetResponse ResponseContent: {httpGetResponse?.ResponseContent}");
-                if (!httpGetResponse.IsSuccessStatusCode)
-                {
-                    _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["presentation"]["requestedCredentials"][0]["manifest"]}");
-                    return null;
-                }
-
-                CacheValueWithNoExpiration("manifestPresentation", httpGetResponse.ResponseContent);
-                JObject manifest = JObject.Parse(httpGetResponse.ResponseContent);
-
-                // update presentationRequest from manifest with things that don't change for each request
-                if (!config["authority"].ToString().StartsWith("did:ion:"))
-                {
-                    config["authority"] = manifest["input"]["issuer"];
-                }
-                config["registration"]["clientName"] = AppSettings.client_name;
-
-                var requestedCredentials = config["presentation"]["requestedCredentials"][0];
-                if (requestedCredentials["type"].ToString().Length == 0)
-                {
-                    requestedCredentials["type"] = manifest["id"];
-                }
-                requestedCredentials["trustedIssuers"][0] = manifest["input"]["issuer"]; //VCSettings.didIssuer;
-
-                json = JsonConvert.SerializeObject(config);
-
-                CacheValueWithNoExpiration("presentationRequest", json);
-                return config;
+                _log.LogInformation($"presentationRequest retrieved from Cache: {json}");
+                return JObject.Parse(json);
             }
-            catch (Exception ex)
+
+            // see if file path was passed on command line
+            string presentationRequestFile = _configuration.GetValue<string>("PresentationRequestConfigFile");
+            if (string.IsNullOrEmpty(presentationRequestFile))
             {
-                _log.LogError($"GetPresentationRequest Exception: {ex.Message}");
+                presentationRequestFile = PresentationRequestConfigFile;
+            }
+
+            string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
+            _log.LogInformation($"FileLocation: {fileLocation}");
+            string file = $"{fileLocation}\\{presentationRequestFile}";
+            if (!System.IO.File.Exists(file))
+            {
+                _log.LogError($"File not found: {presentationRequestFile}");
                 return null;
             }
+
+            _log.LogTrace($"PresentationRequest file: {presentationRequestFile}");
+            json = System.IO.File.ReadAllText(file);
+            _log.LogInformation($"Json read from config: {json}");
+            JObject config = JObject.Parse(json);
+            _log.LogInformation($"Config: {config}");
+
+            // download manifest and cache it
+            _log.LogInformation($"Executing HttpGetAsync");
+            HttpActionResponse httpGetResponse = await HttpGetAsync(config["presentation"]["requestedCredentials"][0]["manifest"].ToString());
+            _log.LogInformation($"HttpGetResponse ResponseContent: {httpGetResponse?.ResponseContent}");
+            if (!httpGetResponse.IsSuccessStatusCode)
+            {
+                _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["presentation"]["requestedCredentials"][0]["manifest"]}");
+                return null;
+            }
+
+            CacheValueWithNoExpiration("manifestPresentation", httpGetResponse.ResponseContent);
+            JObject manifest = JObject.Parse(httpGetResponse.ResponseContent);
+
+            // update presentationRequest from manifest with things that don't change for each request
+            if (!config["authority"].ToString().StartsWith("did:ion:"))
+            {
+                config["authority"] = manifest["input"]["issuer"];
+            }
+            config["registration"]["clientName"] = AppSettings.client_name;
+
+            var requestedCredentials = config["presentation"]["requestedCredentials"][0];
+            if (requestedCredentials["type"].ToString().Length == 0)
+            {
+                requestedCredentials["type"] = manifest["id"];
+            }
+            requestedCredentials["trustedIssuers"][0] = manifest["input"]["issuer"]; //VCSettings.didIssuer;
+
+            json = JsonConvert.SerializeObject(config);
+
+            CacheValueWithNoExpiration("presentationRequest", json);
+            return config;
         }
 
         /*
