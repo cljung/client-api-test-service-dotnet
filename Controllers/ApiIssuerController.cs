@@ -98,7 +98,7 @@ namespace AA.DIDApi.Controllers
                 string correlationId = Guid.NewGuid().ToString();
                 issuanceRequest["callback"]["url"] = $"{GetApiPath()}/issuanceCallback";
                 issuanceRequest["callback"]["state"] = correlationId;
-                issuanceRequest["callback"]["nounce"] = Guid.NewGuid().ToString();
+                issuanceRequest["callback"]["nonce"] = Guid.NewGuid().ToString();
                 issuanceRequest["callback"]["headers"]["my-api-key"] = this.AppSettings.ApiKey;
                 string pin = null;
 

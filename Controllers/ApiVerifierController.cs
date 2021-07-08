@@ -105,9 +105,9 @@ namespace AA.DIDApi.Controllers
                 var callback = presentationRequest["callback"];
                 callback["url"] = $"{GetApiPath()}/presentationCallback";
                 callback["state"] = correlationId;
-                callback["nounce"] = Guid.NewGuid().ToString();
+                callback["nonce"] = Guid.NewGuid().ToString();
                 callback["headers"]["my-api-key"] = this.AppSettings.ApiKey;
-
+                
                 string jsonString = JsonConvert.SerializeObject(presentationRequest);
                 HttpActionResponse httpPostResponse = await HttpPostAsync(jsonString);
                 if (!httpPostResponse.IsSuccessStatusCode)
@@ -371,38 +371,6 @@ namespace AA.DIDApi.Controllers
             CacheValueWithNoExpiration("presentationRequest", json);
             return config;
         }
-
-        /*
-        /// <summary>
-        /// Hardcoded values
-        /// </summary>
-        protected async Task<JObject> GetPresentationRequest()
-        {
-            string json = "{\"authority\":\"did:ion:EiD_ZULUvK_3eTfWfq97cc87DeU8J0AEzIaSuFLRAHzXoQ:eyJkZWx0YSI6eyJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljS2V5cyI6W3siaWQiOiJzaWdfY2FiNjVhYTAiLCJwdWJsaWNLZXlKd2siOnsiY3J2Ijoic2VjcDI1NmsxIiwia3R5IjoiRUMiLCJ4IjoiU21xMVZNNXp0RUVpZGpoWE5uckxub3N5TkI2MEVaV05CWXdUY3dQazU3YyIsInkiOiJSeFd3QlNyQjBaWl9MdndKVGpMamRqUEtTMXlZQjgzOUZIckFWUm9EYW9nIn0sInB1cnBvc2VzIjpbImF1dGhlbnRpY2F0aW9uIiwiYXNzZXJ0aW9uTWV0aG9kIl0sInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkifV0sInNlcnZpY2VzIjpbeyJpZCI6ImxpbmtlZGRvbWFpbnMiLCJzZXJ2aWNlRW5kcG9pbnQiOnsib3JpZ2lucyI6WyJodHRwczovL3ZjYXBpZGV2Lndvb2Rncm92ZWRlbW8uY29tLyJdfSwidHlwZSI6IkxpbmtlZERvbWFpbnMifV19fV0sInVwZGF0ZUNvbW1pdG1lbnQiOiJFaUIza0VSRUlwSWdodFp2SUxaemFlMDF1NGtXSVNnWHFqN0lFUFVfUGNBUnJBIn0sInN1ZmZpeERhdGEiOnsiZGVsdGFIYXNoIjoiRWlEcGMtelNRcHJYMGhacDdlMC1QXzhwWjkzdm9EZXhwLVo1ZXVtbFhzN2hQUSIsInJlY292ZXJ5Q29tbWl0bWVudCI6IkVpQWtKOTNBLThyeXF3X0VqSVRuSEpqdkhvZ016N2YtTlRZWXlhOENVMEdYdWcifX0\",\"includeQRCode\":false,\"registration\":{\"clientName\":\"DotNet Client API Verifier\"},\"callback\":{\"url\":\"...set at runtime...\",\"state\":\"...set at runtime...\",\"headers\":{\"my-api-key\":\"blabla\"}},\"presentation\":{\"includeReceipt\":true,\"requestedCredentials\":[{\"type\":\"Cljungdemob2cMembership\",\"manifest\":\"https://beta.did.msidentity.com/v1.0/9885457a-2026-4e2c-a47e-32ff52ea0b8d/verifiableCredential/contracts/Cljungdemob2cMembership\",\"purpose\":\"the purpose why the verifier asks for a VC\",\"trustedIssuers\":[\"did:ion:EiDDDbBaSlIvrzluYEW4mqnxpM09-MrJrcn6w3EVG_cMIQ:eyJkZWx0YSI6eyJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljS2V5cyI6W3siaWQiOiJzaWdfNTg0OGUxZGIiLCJwdWJsaWNLZXlKd2siOnsiY3J2Ijoic2VjcDI1NmsxIiwia3R5IjoiRUMiLCJ4IjoiX3ZzVjB4V0tWMDMxWlZTaVJTb2dabHB3QjZVRThfLWZ2WU1vcXNQRDNYMCIsInkiOiItMXJxZEx4TUpZN081UHA3R21sSWhWSWVtVlNnQnpjaEhObi1mZE02MDVrIn0sInB1cnBvc2VzIjpbImF1dGhlbnRpY2F0aW9uIiwiYXNzZXJ0aW9uTWV0aG9kIl0sInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkifV0sInNlcnZpY2VzIjpbeyJpZCI6ImxpbmtlZGRvbWFpbnMiLCJzZXJ2aWNlRW5kcG9pbnQiOnsib3JpZ2lucyI6WyJodHRwczovL2Zhd2x0eXRvd2VyczIuY29tLyJdfSwidHlwZSI6IkxpbmtlZERvbWFpbnMifV19fV0sInVwZGF0ZUNvbW1pdG1lbnQiOiJFaUJFUi1UZC1LTkdIRGFMcDBNUDFFdzUtd3ZQa3RrMmVMVFlPMkRPazJDZElnIn0sInN1ZmZpeERhdGEiOnsiZGVsdGFIYXNoIjoiRWlEcmJxalBtVDZSaEg2aEhRdkZuQ1drRVFzaU9oUG11SEhVR3IyeDhYM2ljQSIsInJlY292ZXJ5Q29tbWl0bWVudCI6IkVpQkpDUjUycHV4SldoZVNaZnFqNFgtMkNKSkdwRHY1ZEY0S1VXOEZjN0ZQZFEifX0\"]}]}}";
-            JObject config = JObject.Parse(json);
-
-            JObject manifest = JObject.Parse("{\"id\":\"Cljungdemob2cMembership\",\"display\":{\"locale\":\"en-US\",\"contract\":\"https://beta.did.msidentity.com/v1.0/9885457a-2026-4e2c-a47e-32ff52ea0b8d/verifiableCredential/contracts/Cljungdemob2cMembership\",\"card\":{\"title\":\"CljungdemoB2C Membership\",\"issuedBy\":\"cljungdemob2c\",\"backgroundColor\":\"#C0C0C0\",\"textColor\":\"#ffffff\",\"logo\":{\"uri\":\"https://cljungdemob2c.blob.core.windows.net/uxcust/templates/images/snoopy-small.jpg\",\"description\":\"cljungdemob2c Logo\"},\"description\":\"Use your verified credential card to prove you are a cljungdemob2c member.\"},\"consent\":{\"title\":\"Do you want to get your cljungdemob2c membership card?\",\"instructions\":\"Sign in with your account to get your card.\"},\"claims\":{\"vc.credentialSubject.firstName\":{\"type\":\"String\",\"label\":\"First name\"},\"vc.credentialSubject.lastName\":{\"type\":\"String\",\"label\":\"Last name\"},\"vc.credentialSubject.country\":{\"type\":\"String\",\"label\":\"Country\"},\"vc.credentialSubject.sub\":{\"type\":\"String\",\"label\":\"sub\"},\"vc.credentialSubject.tid\":{\"type\":\"String\",\"label\":\"tid\"},\"vc.credentialSubject.displayName\":{\"type\":\"String\",\"label\":\"displayName\"},\"vc.credentialSubject.username\":{\"type\":\"String\",\"label\":\"username\"}},\"id\":\"display\"},\"input\":{\"credentialIssuer\":\"https://beta.did.msidentity.com/v1.0/9885457a-2026-4e2c-a47e-32ff52ea0b8d/verifiableCredential/card/issue\",\"issuer\":\"did:ion:EiDDDbBaSlIvrzluYEW4mqnxpM09-MrJrcn6w3EVG_cMIQ:eyJkZWx0YSI6eyJwYXRjaGVzIjpbeyJhY3Rpb24iOiJyZXBsYWNlIiwiZG9jdW1lbnQiOnsicHVibGljS2V5cyI6W3siaWQiOiJzaWdfNTg0OGUxZGIiLCJwdWJsaWNLZXlKd2siOnsiY3J2Ijoic2VjcDI1NmsxIiwia3R5IjoiRUMiLCJ4IjoiX3ZzVjB4V0tWMDMxWlZTaVJTb2dabHB3QjZVRThfLWZ2WU1vcXNQRDNYMCIsInkiOiItMXJxZEx4TUpZN081UHA3R21sSWhWSWVtVlNnQnpjaEhObi1mZE02MDVrIn0sInB1cnBvc2VzIjpbImF1dGhlbnRpY2F0aW9uIiwiYXNzZXJ0aW9uTWV0aG9kIl0sInR5cGUiOiJFY2RzYVNlY3AyNTZrMVZlcmlmaWNhdGlvbktleTIwMTkifV0sInNlcnZpY2VzIjpbeyJpZCI6ImxpbmtlZGRvbWFpbnMiLCJzZXJ2aWNlRW5kcG9pbnQiOnsib3JpZ2lucyI6WyJodHRwczovL2Zhd2x0eXRvd2VyczIuY29tLyJdfSwidHlwZSI6IkxpbmtlZERvbWFpbnMifV19fV0sInVwZGF0ZUNvbW1pdG1lbnQiOiJFaUJFUi1UZC1LTkdIRGFMcDBNUDFFdzUtd3ZQa3RrMmVMVFlPMkRPazJDZElnIn0sInN1ZmZpeERhdGEiOnsiZGVsdGFIYXNoIjoiRWlEcmJxalBtVDZSaEg2aEhRdkZuQ1drRVFzaU9oUG11SEhVR3IyeDhYM2ljQSIsInJlY292ZXJ5Q29tbWl0bWVudCI6IkVpQkpDUjUycHV4SldoZVNaZnFqNFgtMkNKSkdwRHY1ZEY0S1VXOEZjN0ZQZFEifX0\",\"attestations\":{\"idTokens\":[{\"id\":\"https://login.fawltytowers2.com/cljungdemob2c.onmicrosoft.com/B2C_1A_UX_signup_signin/v2.0/.well-known/openid-configuration\",\"encrypted\":false,\"claims\":[{\"claim\":\"name\",\"required\":false,\"indexed\":false},{\"claim\":\"sub\",\"required\":false,\"indexed\":false},{\"claim\":\"tid\",\"required\":false,\"indexed\":false},{\"claim\":\"email\",\"required\":false,\"indexed\":false},{\"claim\":\"family_name\",\"required\":false,\"indexed\":false},{\"claim\":\"given_name\",\"required\":false,\"indexed\":false},{\"claim\":\"ctry\",\"required\":false,\"indexed\":false}],\"required\":false,\"configuration\":\"https://login.fawltytowers2.com/cljungdemob2c.onmicrosoft.com/B2C_1A_UX_signup_signin/v2.0/.well-known/openid-configuration\",\"client_id\":\"ac455c95-6f77-4dd5-bffe-117329946906\",\"redirect_uri\":\"vcclient://openid\",\"scope\":\"openid\"}],\"_hasAttestations\":false},\"id\":\"input\"}}");
-
-            // update presentationRequest from manifest with things that don't change for each request
-            if (!config["authority"].ToString().StartsWith("did:ion:"))
-            {
-                config["authority"] = manifest["input"]["issuer"];
-            }
-            config["registration"]["clientName"] = "DotNet Client API Verifier"; // AppSettings.client_name;
-
-            var requestedCredentials = config["presentation"]["requestedCredentials"][0];
-            if (requestedCredentials["type"].ToString().Length == 0)
-            {
-                requestedCredentials["type"] = manifest["id"];
-            }
-            requestedCredentials["trustedIssuers"][0] = manifest["input"]["issuer"]; //VCSettings.didIssuer;
-
-            json = JsonConvert.SerializeObject(config);
-
-            CacheValueWithNoExpiration("presentationRequest", json);
-            return await Task.FromResult(config);
-        }
-        */
 
         protected JObject GetPresentationManifest()
         {

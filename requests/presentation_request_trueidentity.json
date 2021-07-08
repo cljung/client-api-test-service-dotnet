@@ -6,7 +6,7 @@
   },
   "callback": {
     "url": "...set at runtime...",
-    "nounce": "...set at runtime...",
+    "nonce": "...set at runtime...",
     "state": "...set at runtime...",
     "headers": {
       "my-api-key": "blabla"
