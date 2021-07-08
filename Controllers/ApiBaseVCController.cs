@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -78,18 +79,30 @@ namespace AA.DIDApi.Controllers
         // POST to VC Client API
         protected async Task<HttpActionResponse> HttpPostAsync(string body)
         {
-            _log.LogTrace($"POST request initializing\n{body}");
-
-            using HttpClient client = new HttpClient();
-            using HttpResponseMessage res = await client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json"));
-            string response = res.Content.ReadAsStringAsync().Result;
-
-            return new HttpActionResponse
+            try
             {
-                StatusCode = res.StatusCode,
-                IsSuccessStatusCode = res.IsSuccessStatusCode,
-                ResponseContent = response
-            };
+                _log.LogTrace($"POST request initializing\n{body}");
+
+                using HttpClient client = new HttpClient();
+                using HttpResponseMessage res = await client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json"));
+                string response = res.Content.ReadAsStringAsync().Result;
+
+                return new HttpActionResponse
+                {
+                    StatusCode = res.StatusCode,
+                    IsSuccessStatusCode = res.IsSuccessStatusCode,
+                    ResponseContent = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new HttpActionResponse
+                {
+                    StatusCode = HttpStatusCode.GatewayTimeout,
+                    IsSuccessStatusCode = false,
+                    ResponseContent = ex.Message
+                };
+            }
         }
 
         // GET
