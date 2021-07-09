@@ -18,7 +18,7 @@ namespace AA.DIDApi.Controllers
     [ApiController]
     public class ApiIssuerController : ApiBaseVCController
     {
-        private const string IssuanceRequestConfigFile = "issuance_request_config_v2.json";
+        private const string IssuanceRequestConfigFile = "issuance_request_accessamerica.json";
 
         public ApiIssuerController(
             IConfiguration configuration,
