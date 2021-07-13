@@ -12,7 +12,7 @@
     }
   },
   "issuance": {
-    "type": "",
+    "type": "AccessAmerica",
     "manifest": "https://beta.did.msidentity.com/v1.0/58b6b846-9cc7-4226-af35-5816c2f9336c/verifiableCredential/contracts/AccessAmericaTest",
     "pin": {
       "value": "",
