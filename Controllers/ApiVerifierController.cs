@@ -215,15 +215,112 @@ namespace AA.DIDApi.Controllers
             }
         }
 
+        //[HttpPost("presentation-response-b2c")]
+        //public async Task<ActionResult> PostPresentationResponseB2C()
+        //{
+        //    TraceHttpRequest();
+
+        //    try
+        //    {
+        //        string body = await GetRequestBodyAsync();
+        //        _log.LogTrace(body);
+        //        JObject b2cRequest = JObject.Parse(body);
+        //        string correlationId = b2cRequest["id"].ToString();
+        //        if (string.IsNullOrEmpty(correlationId))
+        //        {
+        //            return ReturnErrorMessage("Missing argument 'id'");
+        //        }
+
+        //        if (!GetCachedJsonObject(correlationId, out JObject cacheData))
+        //        {
+        //            return ReturnErrorB2C("Verifiable Credentials not presented"); // 409
+        //        }
+
+        //        // remove cache data now, because if we crash, we don't want to get into an infinite loop of crashing 
+        //        RemoveCacheValue(correlationId);
+
+        //        // get the payload from the presentation-response callback
+        //        var presentationResponse = cacheData["presentationResponse"];
+
+        //        // get the claims tha the VC Client API provides to us from the presented VC
+        //        JObject vcClaims = (JObject)presentationResponse["issuers"][0]["claims"];
+
+        //        // get the token that was presented and dig out the VC credential from it since we want to return the
+        //        // Issuer DID and the holders DID to B2C
+        //        JObject didIdToken = JWTTokenToJObject(presentationResponse["receipt"]["id_token"].ToString());
+        //        var credentialType = didIdToken["presentation_submission"]["descriptor_map"][0]["id"].ToString();
+        //        var presentationPath = didIdToken["presentation_submission"]["descriptor_map"][0]["path"].ToString();
+
+        //        JObject presentation = JWTTokenToJObject(didIdToken.SelectToken(presentationPath).ToString());
+        //        string vcToken = presentation["vp"]["verifiableCredential"][0].ToString();
+
+        //        JObject vc = JWTTokenToJObject(vcToken);
+        //        string displayName = vcClaims.ContainsKey("displayName")
+        //            ? vcClaims["displayName"].ToString()
+        //            : $"{vcClaims["firstName"]} {vcClaims["lastName"]}";
+
+        //        // these claims are optional
+        //        string sub = null;
+        //        string tid = null;
+        //        string username = null;
+
+        //        if (vcClaims.ContainsKey("tid"))
+        //        {
+        //            tid = vcClaims["tid"].ToString();
+        //        }
+        //        if (vcClaims.ContainsKey("sub"))
+        //        { 
+        //            sub = vcClaims["sub"].ToString();
+        //        }
+        //        if (vcClaims.ContainsKey("username"))
+        //        { 
+        //            username = vcClaims["username"].ToString();
+        //        }
+
+        //        var b2cResponse = new
+        //        {
+        //            id = correlationId,
+        //            credentialsVerified = true,
+        //            credentialType = credentialType,
+        //            displayName = displayName,
+        //            givenName = vcClaims["firstName"].ToString(),
+        //            surName = vcClaims["lastName"].ToString(),
+        //            iss = vc["iss"].ToString(),
+        //            sub = vc["sub"].ToString(),
+        //            key = vc["sub"].ToString().Replace("did:ion:","did.ion.").Split(":")[0],
+        //            oid = sub,
+        //            tid = tid,
+        //            username = username
+        //        };
+        //        string resp = JsonConvert.SerializeObject(b2cResponse);
+        //        _log.LogTrace(resp);
+
+        //        return ReturnJson(resp);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return ReturnErrorMessage(ex.Message);
+        //    }
+        //}
+
         [HttpPost("presentation-response-b2c")]
         public async Task<ActionResult> PostPresentationResponseB2C()
         {
             TraceHttpRequest();
-        
+
             try
             {
-                string body = await GetRequestBodyAsync();
-                _log.LogTrace(body);
+                string body;
+                try
+                {
+                    body = await GetRequestBodyAsync();
+                    _log.LogTrace(body);
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing body. error={ex.Message}");
+                }
+
                 JObject b2cRequest = JObject.Parse(body);
                 string correlationId = b2cRequest["id"].ToString();
                 if (string.IsNullOrEmpty(correlationId))
@@ -241,7 +338,7 @@ namespace AA.DIDApi.Controllers
 
                 // get the payload from the presentation-response callback
                 var presentationResponse = cacheData["presentationResponse"];
-                
+
                 // get the claims tha the VC Client API provides to us from the presented VC
                 JObject vcClaims = (JObject)presentationResponse["issuers"][0]["claims"];
 
@@ -250,10 +347,10 @@ namespace AA.DIDApi.Controllers
                 JObject didIdToken = JWTTokenToJObject(presentationResponse["receipt"]["id_token"].ToString());
                 var credentialType = didIdToken["presentation_submission"]["descriptor_map"][0]["id"].ToString();
                 var presentationPath = didIdToken["presentation_submission"]["descriptor_map"][0]["path"].ToString();
-                
+
                 JObject presentation = JWTTokenToJObject(didIdToken.SelectToken(presentationPath).ToString());
                 string vcToken = presentation["vp"]["verifiableCredential"][0].ToString();
-                
+
                 JObject vc = JWTTokenToJObject(vcToken);
                 string displayName = vcClaims.ContainsKey("displayName")
                     ? vcClaims["displayName"].ToString()
@@ -269,11 +366,11 @@ namespace AA.DIDApi.Controllers
                     tid = vcClaims["tid"].ToString();
                 }
                 if (vcClaims.ContainsKey("sub"))
-                { 
+                {
                     sub = vcClaims["sub"].ToString();
                 }
                 if (vcClaims.ContainsKey("username"))
-                { 
+                {
                     username = vcClaims["username"].ToString();
                 }
 
@@ -287,7 +384,7 @@ namespace AA.DIDApi.Controllers
                     surName = vcClaims["lastName"].ToString(),
                     iss = vc["iss"].ToString(),
                     sub = vc["sub"].ToString(),
-                    key = vc["sub"].ToString().Replace("did:ion:","did.ion.").Split(":")[0],
+                    key = vc["sub"].ToString().Replace("did:ion:", "did.ion.").Split(":")[0],
                     oid = sub,
                     tid = tid,
                     username = username
