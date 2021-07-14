@@ -215,6 +215,7 @@ namespace AA.DIDApi.Controllers
             }
         }
 
+        /*
         [HttpPost("presentation-response-b2c")]
         public async Task<ActionResult> PostPresentationResponseB2C()
         {
@@ -302,7 +303,196 @@ namespace AA.DIDApi.Controllers
                 return ReturnErrorMessage(ex.Message);
             }
         }
+        */
 
+        /// <summary>
+        /// Temp implementation
+        /// </summary>
+        [HttpPost("presentation-response-b2c")]
+        public async Task<ActionResult> PostPresentationResponseB2C()
+        {
+            TraceHttpRequest();
+
+            string body;
+            try
+            {
+                body = await GetRequestBodyAsync();
+                _log.LogTrace(body);
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing bod. error={ex.Message}");
+            }
+
+            JObject b2cRequest;
+            try
+            {
+                b2cRequest = JObject.Parse(body);  
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing json body. error={ex.Message}");
+            }
+
+            string correlationId;
+            try
+            {
+                correlationId = b2cRequest["id"].ToString();
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing correlationId. error={ex.Message}");
+            }
+
+            if (string.IsNullOrEmpty(correlationId))
+            {
+                return ReturnErrorMessage("Missing argument 'id'");
+            }
+
+            if (!GetCachedJsonObject(correlationId, out JObject cacheData))
+            {
+                return ReturnErrorB2C("Verifiable Credentials not presented"); // 409
+            }
+
+            // remove cache data now, because if we crash, we don't want to get into an infinite loop of crashing 
+            RemoveCacheValue(correlationId);
+
+            // get the payload from the presentation-response callback
+            JToken presentationResponse;
+            try
+            {
+                presentationResponse = cacheData["presentationResponse"];
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing presentationResponse from cache. b2cRequest={b2cRequest} cacheData={cacheData} error={ex.Message}");
+            }
+
+            // get the claims tha the VC Client API provides to us from the presented VC
+            JObject vcClaims;
+            try
+            {
+                vcClaims = (JObject)presentationResponse["issuers"][0]["claims"];
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing vcClaims from presentationResponse. presentationResponse={presentationResponse} error={ex.Message}");
+            }
+
+            // get the token that was presented and dig out the VC credential from it since we want to return the
+            // Issuer DID and the holders DID to B2C
+            JObject didIdToken;
+            try
+            {
+                didIdToken = JWTTokenToJObject(presentationResponse["receipt"]["id_token"].ToString());
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing didIdToken from presentationResponse. presentationResponse={presentationResponse} error={ex.Message}");
+            }
+
+            string credentialType;
+            try
+            {
+                credentialType = didIdToken["presentation_submission"]["descriptor_map"][0]["id"].ToString();
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing credentialType from didIdToken. didIdToken={didIdToken} error={ex.Message}");
+            }
+
+            string presentationPath;
+            try
+            {
+                presentationPath = didIdToken["presentation_submission"]["descriptor_map"][0]["path"].ToString();
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing presentationPath from didIdToken. didIdToken={didIdToken} error={ex.Message}");
+            }
+
+            JObject presentation;
+            try
+            {
+                presentation = JWTTokenToJObject(didIdToken.SelectToken(presentationPath).ToString());
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing presentation from didIdToken. didIdToken={didIdToken} error={ex.Message}");
+            }
+
+            string vcToken;
+            try
+            {
+                vcToken = presentation["vp"]["verifiableCredential"][0].ToString();
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing vcToken from didIdToken. didIdToken={didIdToken} error={ex.Message}");
+            }
+
+            JObject vc;
+            try
+            {
+                vc = JWTTokenToJObject(vcToken);
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing vc object from vcToken. vcToken={vcToken} error={ex.Message}");
+            }
+
+            string displayName;
+            try
+            {
+                displayName = vcClaims.ContainsKey("displayName")
+                            ? vcClaims["displayName"].ToString()
+                            : $"{vcClaims["firstName"]} {vcClaims["lastName"]}";
+            }
+            catch (Exception ex)
+            {
+                return ReturnErrorMessage($"Error parsing vc displayName from vcClaims. vcClaims={vcClaims} error={ex.Message}");
+            }
+
+            // these claims are optional
+            string sub = null;
+            string tid = null;
+            string username = null;
+
+            if (vcClaims.ContainsKey("tid"))
+            {
+                tid = vcClaims["tid"].ToString();
+            }
+            if (vcClaims.ContainsKey("sub"))
+            {
+                sub = vcClaims["sub"].ToString();
+            }
+            if (vcClaims.ContainsKey("username"))
+            {
+                username = vcClaims["username"].ToString();
+            }
+
+            var b2cResponse = new
+            {
+                id = correlationId,
+                credentialsVerified = true,
+                credentialType = credentialType,
+                displayName = displayName,
+                givenName = vcClaims["firstName"].ToString(),
+                surName = vcClaims["lastName"].ToString(),
+                iss = vc["iss"].ToString(),
+                sub = vc["sub"].ToString(),
+                key = vc["sub"].ToString().Replace("did:ion:", "did.ion.").Split(":")[0],
+                oid = sub,
+                tid = tid,
+                username = username
+            };
+
+            string resp = JsonConvert.SerializeObject(b2cResponse);
+            _log.LogTrace(resp);
+
+            return ReturnJson(resp);
+
+        }
         #endregion Endpoints
 
         #region Helpers
