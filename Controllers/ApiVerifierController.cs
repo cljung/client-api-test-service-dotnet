@@ -215,7 +215,6 @@ namespace AA.DIDApi.Controllers
             }
         }
 
-        /*
         [HttpPost("presentation-response-b2c")]
         public async Task<ActionResult> PostPresentationResponseB2C()
         {
@@ -303,8 +302,8 @@ namespace AA.DIDApi.Controllers
                 return ReturnErrorMessage(ex.Message);
             }
         }
-        */
 
+        /*
         /// <summary>
         /// Temp implementation
         /// </summary>
@@ -493,6 +492,8 @@ namespace AA.DIDApi.Controllers
             return ReturnJson(resp);
 
         }
+        */
+
         #endregion Endpoints
 
         #region Helpers
