@@ -354,10 +354,27 @@ namespace AA.DIDApi.Controllers
                 RemoveCacheValue(correlationId);
 
                 // get the payload from the presentation-response callback
-                var presentationResponse = cacheData["presentationResponse"];
+                JToken presentationResponse;
+                try
+                {
+                    presentationResponse = cacheData["presentationResponse"];
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing presentationResponse from cache. CI={correlationId} b2cRequest={b2cRequest} cacheData={cacheData} error={ex.Message}");
+                }
 
                 // get the claims tha the VC Client API provides to us from the presented VC
-                JObject vcClaims = (JObject)presentationResponse["issuers"][0]["claims"];
+                JObject vcClaims;
+                try
+                {
+                    var dynamic = presentationResponse["issuers"][0]["claims"];
+                    vcClaims = (JObject)dynamic;
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing vcClaims from presentationResponse. CI={correlationId} presentationResponse={presentationResponse} error={ex.Message}");
+                }
 
                 // get the token that was presented and dig out the VC credential from it since we want to return the
                 // Issuer DID and the holders DID to B2C
@@ -413,7 +430,7 @@ namespace AA.DIDApi.Controllers
             }
             catch (Exception ex)
             {
-                return ReturnErrorMessage(ex.Message);
+                return ReturnErrorMessage($"Generic error: {ex.Message}");
             }
         }
 
