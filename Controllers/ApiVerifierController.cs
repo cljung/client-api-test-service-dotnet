@@ -321,11 +321,28 @@ namespace AA.DIDApi.Controllers
                     return ReturnErrorMessage($"Error parsing body. error={ex.Message}");
                 }
 
-                JObject b2cRequest = JObject.Parse(body);
-                string correlationId = b2cRequest["id"].ToString();
-                if (string.IsNullOrEmpty(correlationId))
+                JObject b2cRequest;
+                try
                 {
-                    return ReturnErrorMessage("Missing argument 'id'");
+                    b2cRequest = JObject.Parse(body);
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing json body. body={body} error={ex.Message}");
+                }
+
+                string correlationId;
+                try
+                {
+                    correlationId = b2cRequest["id"].ToString();
+                    if (string.IsNullOrEmpty(correlationId))
+                    {
+                        return ReturnErrorMessage("Missing argument 'id'");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing correlationId from b2cRequest={b2cRequest}. error={ex.Message}");
                 }
 
                 if (!GetCachedJsonObject(correlationId, out JObject cacheData))
