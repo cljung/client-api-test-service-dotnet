@@ -378,14 +378,66 @@ namespace AA.DIDApi.Controllers
 
                 // get the token that was presented and dig out the VC credential from it since we want to return the
                 // Issuer DID and the holders DID to B2C
-                JObject didIdToken = JWTTokenToJObject(presentationResponse["receipt"]["id_token"].ToString());
-                var credentialType = didIdToken["presentation_submission"]["descriptor_map"][0]["id"].ToString();
-                var presentationPath = didIdToken["presentation_submission"]["descriptor_map"][0]["path"].ToString();
+                JObject didIdToken;
+                try
+                {
+                    didIdToken = JWTTokenToJObject(presentationResponse["receipt"]["id_token"].ToString());
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing didIdToken from presentationResponse. presentationResponse={presentationResponse} error={ex.Message}");
+                }
 
-                JObject presentation = JWTTokenToJObject(didIdToken.SelectToken(presentationPath).ToString());
-                string vcToken = presentation["vp"]["verifiableCredential"][0].ToString();
+                string credentialType;
+                try
+                {
+                    credentialType = didIdToken["presentation_submission"]["descriptor_map"][0]["id"].ToString();
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing credentialType from didIdToken. didIdToken={didIdToken} error={ex.Message}");
+                }
 
-                JObject vc = JWTTokenToJObject(vcToken);
+                string presentationPath;
+                try
+                {
+                    presentationPath = didIdToken["presentation_submission"]["descriptor_map"][0]["path"].ToString();
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing presentationPath from didIdToken. didIdToken={didIdToken} error={ex.Message}");
+                }
+
+                JObject presentation;
+                try
+                {
+                    presentation = JWTTokenToJObject(didIdToken.SelectToken(presentationPath).ToString());
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing presentation from didIdToken. didIdToken={didIdToken} error={ex.Message}");
+                }
+
+                string vcToken;
+                try
+                {
+                    vcToken = presentation["vp"]["verifiableCredential"][0].ToString();
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing vcToken from didIdToken. didIdToken={didIdToken} error={ex.Message}");
+                }
+
+                JObject vc;
+                try
+                {
+                    vc = JWTTokenToJObject(vcToken);
+                }
+                catch (Exception ex)
+                {
+                    return ReturnErrorMessage($"Error parsing vc object from vcToken. vcToken={vcToken} error={ex.Message}");
+                }
+
                 string displayName = vcClaims.ContainsKey("displayName")
                     ? vcClaims["displayName"].ToString()
                     : $"{vcClaims["firstName"]} {vcClaims["lastName"]}";
