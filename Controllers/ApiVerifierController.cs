@@ -139,7 +139,7 @@ namespace AA.DIDApi.Controllers
             try 
             {
                 string body = await GetRequestBodyAsync();
-                _log.LogTrace(body);
+                _log.LogInformation(body);
                 JObject presentationResponse = JObject.Parse(body);
                 string correlationId = presentationResponse["state"].ToString();
 
