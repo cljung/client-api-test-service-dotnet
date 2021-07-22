@@ -143,6 +143,15 @@ namespace AA.DIDApi.Controllers
                 JObject presentationResponse = JObject.Parse(body);
                 string correlationId = presentationResponse["state"].ToString();
 
+                string presentationResponseCode = presentationResponse["code"]?.ToString();
+                if (string.IsNullOrEmpty(presentationResponseCode) ||
+                    (presentationResponseCode != "request_retrieved" &&
+                    presentationResponseCode != "presentation_verified"))
+                {
+                    _log.LogError($"presentationCallback() - presentationResponse[\"code\"] = {presentationResponseCode}");
+                    return new BadRequestResult();
+                }
+
                 // request_retrieved == QR code has been scanned and request retrieved from VC Client API
                 if (presentationResponse["code"].ToString() == "request_retrieved")
                 {
