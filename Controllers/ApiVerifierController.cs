@@ -17,6 +17,8 @@ namespace AA.DIDApi.Controllers
     [ApiController]
     public class ApiVerifierController : ApiBaseVCController
     {
+        private readonly ILogger _logger;
+
         protected const string PresentationRequestConfigFile = "presentation_request_accessamerica.json";
 
         public ApiVerifierController(
@@ -24,10 +26,14 @@ namespace AA.DIDApi.Controllers
             IOptions<AppSettingsModel> appSettings,
             IMemoryCache memoryCache,
             IWebHostEnvironment env,
-            ILogger<ApiVerifierController> log)
-                : base(configuration, appSettings, memoryCache, env, log)
+            //ILogger<ApiVerifierController> log,
+            ILoggerFactory loggerFactory)
+                : base(configuration, appSettings, memoryCache, env//, log
+                                                                   )
         {
             GetPresentationRequest().GetAwaiter().GetResult();
+
+            _logger = loggerFactory.CreateLogger("VerifierLogger");
         }
 
         #region Endpoints
@@ -113,7 +119,7 @@ namespace AA.DIDApi.Controllers
                 if (!httpPostResponse.IsSuccessStatusCode)
                 {
                     string message = $"VC Client API Error Response\n{httpPostResponse.ResponseContent}\nStatus:{httpPostResponse.StatusCode}\n posting to: {this.AppSettings.ApiEndpoint}\n with body: {jsonString}";
-                    _log.LogError(message);
+                    _logger.LogError(message);
                     return ReturnErrorMessage(message);
                 }
 
@@ -121,8 +127,8 @@ namespace AA.DIDApi.Controllers
                 JObject apiResp = JObject.Parse(httpPostResponse.ResponseContent);
                 apiResp.Add(new JProperty("id", correlationId));
                 httpPostResponse.ResponseContent = JsonConvert.SerializeObject(apiResp);
-                
-                _log.LogTrace($"VC Client API Response\n{httpPostResponse.ResponseContent}");
+
+                _logger.LogTrace($"VC Client API Response\n{httpPostResponse.ResponseContent}");
                 return ReturnJson(httpPostResponse.ResponseContent);
             }
             catch(Exception ex)
@@ -139,7 +145,7 @@ namespace AA.DIDApi.Controllers
             try 
             {
                 string body = await GetRequestBodyAsync();
-                _log.LogTrace(body);
+                _logger.LogTrace(body);
                 JObject presentationResponse = JObject.Parse(body);
                 string correlationId = presentationResponse["state"].ToString();
 
@@ -148,14 +154,14 @@ namespace AA.DIDApi.Controllers
                     (presentationResponseCode != "request_retrieved" &&
                     presentationResponseCode != "presentation_verified"))
                 {
-                    _log.LogError($"presentationCallback() - presentationResponse[\"code\"] = {presentationResponseCode}");
+                    _logger.LogError($"presentationCallback() - presentationResponse[\"code\"] = {presentationResponseCode}");
                     return new BadRequestResult();
                 }
 
                 // request_retrieved == QR code has been scanned and request retrieved from VC Client API
                 if (presentationResponse["code"].ToString() == "request_retrieved")
                 {
-                    _log.LogTrace("presentationCallback() - request_retrieved");
+                    _logger.LogTrace("presentationCallback() - request_retrieved");
                     string requestId = presentationResponse["requestId"].ToString();
                     var cacheData = new
                     {
@@ -169,7 +175,7 @@ namespace AA.DIDApi.Controllers
                 if (presentationResponse["code"].ToString() == "presentation_verified")
                 {
                     var claims = presentationResponse["issuers"][0]["claims"];
-                    _log.LogTrace($"presentationCallback() - presentation_verified\n{claims}");
+                    _logger.LogTrace($"presentationCallback() - presentation_verified\n{claims}");
 
                     // build a displayName so we can tell the called who presented their VC
                     JObject vcClaims = (JObject)presentationResponse["issuers"][0]["claims"];
@@ -211,7 +217,7 @@ namespace AA.DIDApi.Controllers
 
                 if (GetCachedJsonObject(correlationId, out JObject cacheData))
                 {
-                    _log.LogTrace($"status={cacheData["status"]}, message={cacheData["message"]}");
+                    _logger.LogTrace($"status={cacheData["status"]}, message={cacheData["message"]}");
                     //RemoveCacheValue(state); // if you're not using B2C integration, uncomment this line
                     return ReturnJson(TransformCacheDataToBrowserResponse(cacheData));
                 }
@@ -323,7 +329,7 @@ namespace AA.DIDApi.Controllers
                 try
                 {
                     body = await GetRequestBodyAsync();
-                    _log.LogTrace(body);
+                    _logger.LogTrace(body);
                 }
                 catch (Exception ex)
                 {
@@ -485,7 +491,7 @@ namespace AA.DIDApi.Controllers
                     username = username
                 };
                 string resp = JsonConvert.SerializeObject(b2cResponse);
-                _log.LogTrace(resp);
+                _logger.LogTrace(resp);
 
                 return ReturnJson(resp);
             }
@@ -699,7 +705,7 @@ namespace AA.DIDApi.Controllers
         {
             if (GetCachedValue("presentationRequest", out string json))
             {
-                _log.LogInformation($"presentationRequest retrieved from Cache: {json}");
+                _logger.LogInformation($"presentationRequest retrieved from Cache: {json}");
                 return JObject.Parse(json);
             }
 
@@ -716,7 +722,7 @@ namespace AA.DIDApi.Controllers
                 : $"{fileLocation}\\requests\\{presentationRequestFile}";
             if (!System.IO.File.Exists(file))
             {
-                _log.LogError($"File not found: {presentationRequestFile}");
+                _logger.LogError($"File not found: {presentationRequestFile}");
                 return null;
             }
 
@@ -728,7 +734,7 @@ namespace AA.DIDApi.Controllers
             HttpActionResponse httpGetResponse = await HttpGetAsync(config["presentation"]["requestedCredentials"][0]["manifest"].ToString());
             if (!httpGetResponse.IsSuccessStatusCode)
             {
-                _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["presentation"]["requestedCredentials"][0]["manifest"]}");
+                _logger.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["presentation"]["requestedCredentials"][0]["manifest"]}");
                 return null;
             }
 

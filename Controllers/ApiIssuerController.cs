@@ -18,6 +18,8 @@ namespace AA.DIDApi.Controllers
     [ApiController]
     public class ApiIssuerController : ApiBaseVCController
     {
+        private readonly ILogger _logger;
+
         private const string IssuanceRequestConfigFile = "issuance_request_accessamerica.json";
 
         public ApiIssuerController(
@@ -25,10 +27,14 @@ namespace AA.DIDApi.Controllers
             IOptions<AppSettingsModel> appSettings,
             IMemoryCache memoryCache,
             IWebHostEnvironment env,
-            ILogger<ApiIssuerController> log) 
-                : base(configuration, appSettings, memoryCache, env, log)
+            //ILogger<ApiIssuerController> log,
+            ILoggerFactory loggerFactory) 
+                : base(configuration, appSettings, memoryCache, env//, log
+                                                                   )
         {
             GetIssuanceRequest().GetAwaiter().GetResult();
+
+            _logger = loggerFactory.CreateLogger("IssuerLogger");
         }
 
         #region Endpoints
@@ -111,7 +117,7 @@ namespace AA.DIDApi.Controllers
                         int pinMaxValue = int.Parse("".PadRight(pinLength, '9'));          // 9999999
                         int randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
                         pin = string.Format("{0:D" + pinLength.ToString() + "}", randomNumber);
-                        _log.LogTrace($"pin={pin}");
+                        _logger.LogTrace($"pin={pin}");
                         issuanceRequest["issuance"]["pin"]["value"] = pin;
                     }
                 }
@@ -120,7 +126,7 @@ namespace AA.DIDApi.Controllers
                 HttpActionResponse httpPostResponse = await HttpPostAsync(jsonString);
                 if (!httpPostResponse.IsSuccessStatusCode)
                 {
-                    _log.LogError($"VC Client API Error Response\n{httpPostResponse.ResponseContent}\n{httpPostResponse.StatusCode}");
+                    _logger.LogError($"VC Client API Error Response\n{httpPostResponse.ResponseContent}\n{httpPostResponse.StatusCode}");
                     return ReturnErrorMessage(httpPostResponse.ResponseContent);
                 }
                 
@@ -132,7 +138,7 @@ namespace AA.DIDApi.Controllers
 
                 requestConfig.Add(new JProperty("id", correlationId));
                 jsonString = JsonConvert.SerializeObject(requestConfig);
-                _log.LogTrace($"VC Client API Response\n{jsonString}");
+                _logger.LogTrace($"VC Client API Response\n{jsonString}");
             
                 return ReturnJson(jsonString);
             }  
@@ -149,9 +155,9 @@ namespace AA.DIDApi.Controllers
 
             try 
             {
-                _log.LogTrace("issuanceCallback");
+                _logger.LogTrace("issuanceCallback");
                 string body = await GetRequestBodyAsync();
-                _log.LogTrace(body);
+                _logger.LogTrace(body);
                 JObject issuanceResponse = JObject.Parse(body);
             
                 if (issuanceResponse["code"].ToString() == "request_retrieved")
@@ -180,7 +186,7 @@ namespace AA.DIDApi.Controllers
 
             try 
             {
-                _log.LogTrace("response");
+                _logger.LogTrace("response");
                 string body = await GetRequestBodyAsync();
                 JObject claims = JObject.Parse(body);
                 CacheJsonObjectWithExpiration(claims["state"].ToString(), claims);
@@ -246,11 +252,11 @@ namespace AA.DIDApi.Controllers
             string file = $"{fileLocation}\\{issuanceRequestFile}";
             if (!System.IO.File.Exists(file))
             {
-                _log.LogError($"File not found: {issuanceRequestFile}");
+                _logger.LogError($"File not found: {issuanceRequestFile}");
                 return null;
             }
 
-            _log.LogTrace($"IssuanceRequest file: {issuanceRequestFile}");
+            _logger.LogTrace($"IssuanceRequest file: {issuanceRequestFile}");
             json = System.IO.File.ReadAllText(file);
             JObject config = JObject.Parse(json);
 
@@ -258,7 +264,7 @@ namespace AA.DIDApi.Controllers
             HttpActionResponse httpGetResponse = await HttpGetAsync(config["issuance"]["manifest"].ToString());
             if (!httpGetResponse.IsSuccessStatusCode)
             {
-                _log.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["issuance"]["manifest"]}");
+                _logger.LogError($"HttpStatus {httpGetResponse.StatusCode} fetching manifest {config["issuance"]["manifest"]}");
                 return null;
             }
 

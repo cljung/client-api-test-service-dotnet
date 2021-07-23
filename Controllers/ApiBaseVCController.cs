@@ -21,7 +21,7 @@ namespace AA.DIDApi.Controllers
     {
         protected IMemoryCache _cache;
         protected readonly IWebHostEnvironment _env;
-        protected readonly ILogger<ApiBaseVCController> _log;
+        //protected readonly ILogger<ApiBaseVCController> _log;
         protected readonly AppSettingsModel AppSettings;
         protected readonly IConfiguration _configuration;
 
@@ -29,13 +29,14 @@ namespace AA.DIDApi.Controllers
             IConfiguration configuration,
             IOptions<AppSettingsModel> appSettings,
             IMemoryCache memoryCache,
-            IWebHostEnvironment env,
-            ILogger<ApiBaseVCController> log)
+            IWebHostEnvironment env
+            //,ILogger<ApiBaseVCController> log
+            )
         {
             this.AppSettings = appSettings.Value;
             _cache = memoryCache;
             _env = env;
-            _log = log;
+            //_log = log;
             _configuration = configuration;
         }
 
@@ -81,7 +82,7 @@ namespace AA.DIDApi.Controllers
         {
             try
             {
-                _log.LogTrace($"POST request initializing\n{body}");
+                //_log.LogTrace($"POST request initializing\n{body}");
 
                 using HttpClient client = new HttpClient();
                 using HttpResponseMessage res = await client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json"));
@@ -127,7 +128,7 @@ namespace AA.DIDApi.Controllers
                 ? xForwardedFor
                 : HttpContext.Connection.RemoteIpAddress.ToString(); 
             
-            _log.LogTrace($"{DateTime.UtcNow:o} {ipaddr} -> {Request.Method} {Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
+            //_log.LogTrace($"{DateTime.UtcNow:o} {ipaddr} -> {Request.Method} {Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
         }
 
         protected async Task<string> GetRequestBodyAsync()
