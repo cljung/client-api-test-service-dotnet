@@ -31,9 +31,9 @@ namespace AA.DIDApi.Controllers
                 : base(configuration, appSettings, memoryCache, env//, log
                                                                    )
         {
-            GetPresentationRequest().GetAwaiter().GetResult();
-
             _logger = loggerFactory.CreateLogger("VerifierLogger");
+
+            GetPresentationRequest().GetAwaiter().GetResult();
         }
 
         #region Endpoints

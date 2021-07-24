@@ -32,9 +32,9 @@ namespace AA.DIDApi.Controllers
                 : base(configuration, appSettings, memoryCache, env//, log
                                                                    )
         {
-            GetIssuanceRequest().GetAwaiter().GetResult();
-
             _logger = loggerFactory.CreateLogger("IssuerLogger");
+
+            GetIssuanceRequest().GetAwaiter().GetResult();
         }
 
         #region Endpoints
