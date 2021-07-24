@@ -82,7 +82,7 @@ namespace AA.DIDApi.Controllers
         {
             try
             {
-                //_log.LogTrace($"POST request initializing\n{body}");
+                //_log.LogInformation($"POST request initializing\n{body}");
 
                 using HttpClient client = new HttpClient();
                 using HttpResponseMessage res = await client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json"));
@@ -128,7 +128,7 @@ namespace AA.DIDApi.Controllers
                 ? xForwardedFor
                 : HttpContext.Connection.RemoteIpAddress.ToString(); 
             
-            //_log.LogTrace($"{DateTime.UtcNow:o} {ipaddr} -> {Request.Method} {Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
+            //_log.LogInformation($"{DateTime.UtcNow:o} {ipaddr} -> {Request.Method} {Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
         }
 
         protected async Task<string> GetRequestBodyAsync()

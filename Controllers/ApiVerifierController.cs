@@ -128,7 +128,7 @@ namespace AA.DIDApi.Controllers
                 apiResp.Add(new JProperty("id", correlationId));
                 httpPostResponse.ResponseContent = JsonConvert.SerializeObject(apiResp);
 
-                _logger.LogTrace($"VC Client API Response\n{httpPostResponse.ResponseContent}");
+                _logger.LogInformation($"VC Client API Response\n{httpPostResponse.ResponseContent}");
                 return ReturnJson(httpPostResponse.ResponseContent);
             }
             catch(Exception ex)
@@ -145,7 +145,7 @@ namespace AA.DIDApi.Controllers
             try 
             {
                 string body = await GetRequestBodyAsync();
-                _logger.LogTrace(body);
+                _logger.LogInformation(body);
                 JObject presentationResponse = JObject.Parse(body);
                 string correlationId = presentationResponse["state"].ToString();
 
@@ -161,7 +161,7 @@ namespace AA.DIDApi.Controllers
                 // request_retrieved == QR code has been scanned and request retrieved from VC Client API
                 if (presentationResponse["code"].ToString() == "request_retrieved")
                 {
-                    _logger.LogTrace("presentationCallback() - request_retrieved");
+                    _logger.LogInformation("presentationCallback() - request_retrieved");
                     string requestId = presentationResponse["requestId"].ToString();
                     var cacheData = new
                     {
@@ -175,7 +175,7 @@ namespace AA.DIDApi.Controllers
                 if (presentationResponse["code"].ToString() == "presentation_verified")
                 {
                     var claims = presentationResponse["issuers"][0]["claims"];
-                    _logger.LogTrace($"presentationCallback() - presentation_verified\n{claims}");
+                    _logger.LogInformation($"presentationCallback() - presentation_verified\n{claims}");
 
                     // build a displayName so we can tell the called who presented their VC
                     JObject vcClaims = (JObject)presentationResponse["issuers"][0]["claims"];
@@ -217,7 +217,7 @@ namespace AA.DIDApi.Controllers
 
                 if (GetCachedJsonObject(correlationId, out JObject cacheData))
                 {
-                    _logger.LogTrace($"status={cacheData["status"]}, message={cacheData["message"]}");
+                    _logger.LogInformation($"status={cacheData["status"]}, message={cacheData["message"]}");
                     //RemoveCacheValue(state); // if you're not using B2C integration, uncomment this line
                     return ReturnJson(TransformCacheDataToBrowserResponse(cacheData));
                 }
@@ -238,7 +238,7 @@ namespace AA.DIDApi.Controllers
         //    try
         //    {
         //        string body = await GetRequestBodyAsync();
-        //        _log.LogTrace(body);
+        //        _log.LogInformation(body);
         //        JObject b2cRequest = JObject.Parse(body);
         //        string correlationId = b2cRequest["id"].ToString();
         //        if (string.IsNullOrEmpty(correlationId))
@@ -308,7 +308,7 @@ namespace AA.DIDApi.Controllers
         //            username = username
         //        };
         //        string resp = JsonConvert.SerializeObject(b2cResponse);
-        //        _log.LogTrace(resp);
+        //        _log.LogInformation(resp);
 
         //        return ReturnJson(resp);
         //    }
@@ -329,7 +329,7 @@ namespace AA.DIDApi.Controllers
                 try
                 {
                     body = await GetRequestBodyAsync();
-                    _logger.LogTrace(body);
+                    _logger.LogInformation(body);
                 }
                 catch (Exception ex)
                 {
@@ -491,7 +491,7 @@ namespace AA.DIDApi.Controllers
                     username = username
                 };
                 string resp = JsonConvert.SerializeObject(b2cResponse);
-                _logger.LogTrace(resp);
+                _logger.LogInformation(resp);
 
                 return ReturnJson(resp);
             }
@@ -514,7 +514,7 @@ namespace AA.DIDApi.Controllers
             try
             {
                 body = await GetRequestBodyAsync();
-                _log.LogTrace(body);
+                _log.LogInformation(body);
             }
             catch (Exception ex)
             {
@@ -685,7 +685,7 @@ namespace AA.DIDApi.Controllers
             };
 
             string resp = JsonConvert.SerializeObject(b2cResponse);
-            _log.LogTrace(resp);
+            _log.LogInformation(resp);
 
             return ReturnJson(resp);
 

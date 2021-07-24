@@ -117,7 +117,7 @@ namespace AA.DIDApi.Controllers
                         int pinMaxValue = int.Parse("".PadRight(pinLength, '9'));          // 9999999
                         int randomNumber = RandomNumberGenerator.GetInt32(1, pinMaxValue);
                         pin = string.Format("{0:D" + pinLength.ToString() + "}", randomNumber);
-                        _logger.LogTrace($"pin={pin}");
+                        _logger.LogInformation($"pin={pin}");
                         issuanceRequest["issuance"]["pin"]["value"] = pin;
                     }
                 }
@@ -138,7 +138,7 @@ namespace AA.DIDApi.Controllers
 
                 requestConfig.Add(new JProperty("id", correlationId));
                 jsonString = JsonConvert.SerializeObject(requestConfig);
-                _logger.LogTrace($"VC Client API Response\n{jsonString}");
+                _logger.LogInformation($"VC Client API Response\n{jsonString}");
             
                 return ReturnJson(jsonString);
             }  
@@ -155,9 +155,9 @@ namespace AA.DIDApi.Controllers
 
             try 
             {
-                _logger.LogTrace("issuanceCallback");
+                _logger.LogInformation("issuanceCallback");
                 string body = await GetRequestBodyAsync();
-                _logger.LogTrace(body);
+                _logger.LogInformation(body);
                 JObject issuanceResponse = JObject.Parse(body);
             
                 if (issuanceResponse["code"].ToString() == "request_retrieved")
@@ -186,7 +186,7 @@ namespace AA.DIDApi.Controllers
 
             try 
             {
-                _logger.LogTrace("response");
+                _logger.LogInformation("response");
                 string body = await GetRequestBodyAsync();
                 JObject claims = JObject.Parse(body);
                 CacheJsonObjectWithExpiration(claims["state"].ToString(), claims);
@@ -205,12 +205,18 @@ namespace AA.DIDApi.Controllers
 
             try 
             {
-                string correlationId = Request.Query["id"];
-                if (string.IsNullOrEmpty(correlationId))
+                _logger.LogInformation($"[api/issuer/issue-response] Request.Query.Keys={Request.Query.Keys.Count}");
+                foreach (string key in Request.Query.Keys)
+                {
+                    _logger.LogInformation($"Key={key}, value={Request.Query[key]}");
+                }
+
+                if (!Request.Query.ContainsKey("id") || string.IsNullOrEmpty(Request.Query["id"]))
                 {
                     return ReturnErrorMessage("Missing argument 'id'");
                 }
-                
+
+                string correlationId = Request.Query["id"];
                 if(GetCachedValue(correlationId, out string body))
                 {
                     RemoveCacheValue(correlationId);
@@ -256,7 +262,7 @@ namespace AA.DIDApi.Controllers
                 return null;
             }
 
-            _logger.LogTrace($"IssuanceRequest file: {issuanceRequestFile}");
+            _logger.LogInformation($"IssuanceRequest file: {issuanceRequestFile}");
             json = System.IO.File.ReadAllText(file);
             JObject config = JObject.Parse(json);
 
