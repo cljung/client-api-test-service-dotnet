@@ -251,7 +251,10 @@ namespace AA.DIDApi.Controllers
             }
 
             string fileLocation = Directory.GetParent(typeof(Program).Assembly.Location).FullName;
-            string file = $"{fileLocation}\\{issuanceRequestFile}";
+//             string file = $"{fileLocation}\\{issuanceRequestFile}";
+            string file = issuanceRequestFile.StartsWith("requests")
+                ? $"{fileLocation}\\{issuanceRequestFile}"
+                : $"{fileLocation}\\requests\\{issuanceRequestFile}";
             if (!System.IO.File.Exists(file))
             {
                 Logger.LogError($"File not found: {issuanceRequestFile}");
