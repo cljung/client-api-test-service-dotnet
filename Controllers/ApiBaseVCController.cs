@@ -21,23 +21,23 @@ namespace AA.DIDApi.Controllers
     {
         protected IMemoryCache _cache;
         protected readonly IWebHostEnvironment _env;
-        //protected readonly ILogger<ApiBaseVCController> _log;
         protected readonly AppSettingsModel AppSettings;
         protected readonly IConfiguration _configuration;
+        protected readonly ILogger Logger;
 
         public ApiBaseVCController(
             IConfiguration configuration,
             IOptions<AppSettingsModel> appSettings,
             IMemoryCache memoryCache,
-            IWebHostEnvironment env
-            //,ILogger<ApiBaseVCController> log
-            )
+            IWebHostEnvironment env,
+            ILogger logger)
         {
             this.AppSettings = appSettings.Value;
             _cache = memoryCache;
             _env = env;
-            //_log = log;
             _configuration = configuration;
+
+            Logger = logger;
         }
 
         protected string GetRequestHostName()
@@ -82,7 +82,7 @@ namespace AA.DIDApi.Controllers
         {
             try
             {
-                //_log.LogInformation($"POST request initializing\n{body}");
+                Logger.LogInformation($"POST request initializing\n{body}");
 
                 using HttpClient client = new HttpClient();
                 using HttpResponseMessage res = await client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json"));
@@ -126,9 +126,9 @@ namespace AA.DIDApi.Controllers
             string xForwardedFor = Request.Headers["X-Forwarded-For"];
             string ipaddr = !string.IsNullOrEmpty(xForwardedFor)
                 ? xForwardedFor
-                : HttpContext.Connection.RemoteIpAddress.ToString(); 
-            
-            //_log.LogInformation($"{DateTime.UtcNow:o} {ipaddr} -> {Request.Method} {Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
+                : HttpContext.Connection.RemoteIpAddress.ToString();
+
+            Logger.LogInformation($"{DateTime.UtcNow:o} {ipaddr} -> {Request.Method} {Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}");
         }
 
         protected async Task<string> GetRequestBodyAsync()
