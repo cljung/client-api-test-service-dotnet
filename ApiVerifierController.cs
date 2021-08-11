@@ -167,9 +167,10 @@ namespace client_api_test_service_dotnet
                 _log.LogTrace(body);
                 JObject presentationResponse = JObject.Parse(body);
                 string correlationId = presentationResponse["state"].ToString();
+                string code = presentationResponse["code"].ToString();
 
                 // request_retrieved == QR code has been scanned and request retrieved from VC Client API
-                if (presentationResponse["code"].ToString() == "request_retrieved") {
+                if ( code == "request_retrieved") {
                     _log.LogTrace("presentationCallback() - request_retrieved");
                     string requestId = presentationResponse["requestId"].ToString();
                     var cacheData = new {
@@ -180,7 +181,7 @@ namespace client_api_test_service_dotnet
                 }
 
                 // presentation_verified == The VC Client API has received and validateed the presented VC
-                if (presentationResponse["code"].ToString() == "presentation_verified") {
+                if ( code == "presentation_verified") {
                     var claims = presentationResponse["issuers"][0]["claims"];
                     _log.LogTrace("presentationCallback() - presentation_verified\n{0}", claims );
 

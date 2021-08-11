@@ -15,5 +15,12 @@ namespace client_api_test_service_dotnet.Models
         public int CacheExpiresInSeconds { get; set; }
         public string ActiveCredentialType { get; set; }
         public string client_name { get; set; }
+
+        public string TenantId { get; set; }
+        public string scope { get; set;}
+        public string ClientId { get; set; }
+        public string ClientSecret { get; set; }
+        public string Authority { get; set; }
+
     }
 }

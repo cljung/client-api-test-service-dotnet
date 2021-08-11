@@ -190,13 +190,16 @@ namespace client_api_test_service_dotnet
                 string body = GetRequestBody();
                 _log.LogTrace(body);
                 JObject issuanceResponse = JObject.Parse(body);
-                if (issuanceResponse["code"].ToString() == "request_retrieved") {
-                    string correlationId = issuanceResponse["state"].ToString();
-                    var cacheData = new {
-                        status = 1,
-                        message = "QR Code is scanned. Waiting for issuance to complete."
-                    };
-                    CacheJsonObjectWithExpiery(correlationId, cacheData);
+                string correlationId = issuanceResponse["state"].ToString();
+                string code = issuanceResponse["code"].ToString();
+                if (code == "request_retrieved") {
+                    CacheJsonObjectWithExpiery( correlationId, new { status = 1,message = "QR Code is scanned. Waiting for issuance to complete." });
+                }
+                if (code == "issuance_succesful") {
+                    CacheJsonObjectWithExpiery( correlationId, new { status = 2, message = "Issuance process is completed." });
+                }
+                if (code == "issuance_failed") {
+                    CacheJsonObjectWithExpiery( correlationId, new { status = 99, message = "Issuance process failed with reason: " + issuanceResponse["details"].ToString() });
                 }
                 return new OkResult();
             } catch (Exception ex) {

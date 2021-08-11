@@ -111,9 +111,15 @@
                                                 document.getElementById('message').innerHTML = respMsg.message;
                                                 clearInterval(checkStatus);
                                             }
-                                            // respMsg.status == 2 -> VC presented and validated
+                                            // respMsg.status == 2 -> VC issued
                                             if (respMsg.status == 2) {
-                                                document.getElementById('message').innerHTML = respMsg.message + " validated successfully as " + cardTitle;
+                                                document.getElementById('message').innerHTML = respMsg.message;
+                                                clearInterval(checkStatus);
+                                            }
+                                            // respMsg.status == 99 -> VC issueance failed
+                                            if (respMsg.status == 99) {
+                                                document.getElementById('message').innerHTML = respMsg.message;
+                                                document.getElementById('message').style.textColor = "red";
                                                 clearInterval(checkStatus);
                                             }
                                         }
@@ -123,13 +129,15 @@
                         })
 
                         var selfAssertedClaims;
+                        var credentialType;
                         fetch('api/issuer/echo')
                             .then(response => response.text())
                             .catch(error => document.getElementById("message").innerHTML = error)
                             .then(response => {
                                 if (response.length > 0) {
                                     var data = JSON.parse(response);
-                                    data1 = data;
+                                    //data1 = data;
+                                    credentialType = data.credentialType;
                                     document.getElementById('vcType').innerText = data.credentialType + " Issuance";
                                     document.getElementById('vcDescription').innerText = data.displayCard.description;
                                     document.body.style.backgroundColor = data.displayCard.backgroundColor;

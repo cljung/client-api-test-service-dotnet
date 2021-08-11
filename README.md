@@ -159,6 +159,36 @@ Some notable attributes in the message:
 - **claims** - parsed claims from the VC
 - **receipt.id_token** - the DID of the presentation
 
+## Adding Authorization 
+The v0.3 version of the VC Client API requires that you pass an access token for authorization. This sample now uses MSAL to aquire an access token via client_credentials.
+The access token is needed because the VC Client API needs to access your Azure Key Vault to get your signing keys.
+You therefor need to create a new App Registration in your Azure AD tenant (the tenant that is protecting your Azure subscription where your Azure Key Vault is deployed). 
+This App also needs to have API Permissions granted to VC Client API, because this API is going to be the one accessing your Azure Key Vault. 
+
+### VC Client API Service Principle
+First you need to create a Sercice Principle for the API `Verifiable Credential Request Service`, which is the Microsoft service that will access your Key Vault.
+You do this via the following Powershell command
+
+```Powershell
+Connect-AzureAD -TenantId <your-tenantid-guid>
+New-AzureADServicePrincipal -AppId "bbb94529-53a3-4be5-a069-7eaf2712b826" -DisplayName "Verifiable Credential Request Service" 
+```
+
+### App Registration for Client Credentials
+Your app needs a way to get an access token and this is done via the client credentials flow. You can register a Web app, accept the defaults, and set the redirect_uri `https://localhost`.
+The important thing is to add an `API Permission` for API `Verifiable Credential Request Service` and permission `VerifiableCredential.Create.All`.
+
+### Update your Access Policy for Azure Key Vault
+The VC Client API needs to have access to your Azure Key Vault. You need to add a new `Access Policy` in your Azure Key Vault for the API `Verifiable Credential Request Service` with "Get" and "Sign" for Key Permissions and "Get" for Secret Permissions.
+
+### Update appsettings.json
+In the appsettings.json file, you add the tenant id (guid) for the `TenantID`, the AppID for the `ClientId` and the secret for the `ClientSecret`.  
+
+```JSON
+    "TenantId": "",
+    "ClientId": "",
+    "ClientSecret": "",
+```
 ## Running the sample
 
 ### Standalone

@@ -15,6 +15,7 @@ using Newtonsoft.Json.Linq;
 using client_api_test_service_dotnet.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Identity.Client;
 
 namespace client_api_test_service_dotnet
 {
@@ -25,6 +26,8 @@ namespace client_api_test_service_dotnet
         protected readonly ILogger<ApiBaseVCController> _log;
         protected readonly AppSettingsModel AppSettings;
         protected readonly IConfiguration _configuration;
+        private string _apiEndpoint;
+        private string _authority;
 
         public ApiBaseVCController(IConfiguration configuration, IOptions<AppSettingsModel> appSettings, IMemoryCache memoryCache, IWebHostEnvironment env, ILogger<ApiBaseVCController> log)
         {
@@ -33,6 +36,10 @@ namespace client_api_test_service_dotnet
             _env = env;
             _log = log;
             _configuration = configuration;
+
+            _apiEndpoint = string.Format(this.AppSettings.ApiEndpoint, this.AppSettings.TenantId);
+            _authority = string.Format(this.AppSettings.Authority, this.AppSettings.TenantId);
+
         }
 
         /// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,11 +69,33 @@ namespace client_api_test_service_dotnet
             };
             return new ContentResult { StatusCode = 409, ContentType = "application/json", Content = JsonConvert.SerializeObject(msg) };
         }
+        protected async Task<(string, string)> GetAccessToken() {
+            IConfidentialClientApplication app = ConfidentialClientApplicationBuilder.Create( this.AppSettings.ClientId )
+                                                        .WithClientSecret( this.AppSettings.ClientSecret )
+                                                        .WithAuthority( new Uri( _authority ) )
+                                                        .Build();
+            string[] scopes = new string[] { this.AppSettings.scope };
+            AuthenticationResult result = null;
+            try {
+                result = await app.AcquireTokenForClient( scopes ).ExecuteAsync();
+            } catch ( Exception ex) {
+                return (String.Empty, ex.Message);
+            }
+            _log.LogTrace( result.AccessToken );
+            return (result.AccessToken, String.Empty);
+        }
         // POST to VC Client API
         protected bool HttpPost(string body, out HttpStatusCode statusCode, out string response) {
-            response = null;
+            response = null;            
+            var accessToken = GetAccessToken( ).Result;            
+            if (accessToken.Item1 == String.Empty ) {
+                statusCode = HttpStatusCode.Unauthorized;
+                response = accessToken.Item2;
+                return false;
+            }
             HttpClient client = new HttpClient();
-            HttpResponseMessage res = client.PostAsync(this.AppSettings.ApiEndpoint, new StringContent(body, Encoding.UTF8, "application/json")).Result;
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", accessToken.Item1 );
+            HttpResponseMessage res = client.PostAsync( _apiEndpoint, new StringContent(body, Encoding.UTF8, "application/json") ).Result;
             response = res.Content.ReadAsStringAsync().Result;
             client.Dispose();
             statusCode = res.StatusCode;

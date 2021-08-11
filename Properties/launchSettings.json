@@ -2,7 +2,7 @@
   "profiles": {
     "client_api_test_service_dotnet": {
       "commandName": "Project",
-      "commandLineArgs": "/IssuanceRequestConfigFile=%cd%\\requests\\issuance_request_config_v2.json /PresentationRequestConfigFile=%cd%\\requests\\presentation_request_config_v2.json",
+      "commandLineArgs": "/IssuanceRequestConfigFile=%cd%\\requests\\issuance_request_fawltytowers2_campuspass.json /PresentationRequestConfigFile=%cd%\\requests\\presentation_request_fawltytowers2_campuspass.json",
       "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
