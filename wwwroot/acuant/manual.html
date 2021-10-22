@@ -1,0 +1,53 @@
+﻿<html>
+    <head>
+        <meta charset="utf-8">
+        <title>DotNet Client API VC Verifier Version</title>
+        <meta name="description" content="NinjaCard Verifiable Credentials Verification">
+        <meta name="author" content="Microsoft">
+        <link rel="stylesheet" href="styles.css">
+        <link rel="icon" href="favicon.png">
+    </head>
+    <body>
+        <div id="wrap">
+            <center><h3>DotNet Client API VC Version</h3></center>
+            <div style="text-align: center;">
+                <img id="vcLogo" src="api/issuer/logo.png" height=200px; />
+                <h1 id="vcType">NinjaCredential Verification</h1>
+                <h3 id="vcDescription"></h3>
+                <div id="message-wrapper" class="margin-bottom-75 margin-top-75" style="display: none">
+                    <i class="fas fa-user-check green icon-text-large margin-bottom-25"></i>
+                    <div id="message"></div>
+                </div>
+
+                <h1>Manual</h1>
+
+                <script>
+                    fetch('api/issuer/echo')
+                        .then(response => response.text())
+                        .catch(error => document.getElementById("message").innerHTML = error)
+                        .then(response => {
+                            if (response.length > 0) {
+                                var data = JSON.parse(response);
+                                document.getElementById('vcType').innerText = data.credentialType + " Verifiable Credentials";
+                                document.getElementById('vcDescription').innerText = data.displayCard.description;
+                                document.body.style.backgroundColor = data.displayCard.backgroundColor;
+                                document.body.style.color = data.displayCard.textColor;
+                                document.getElementById('idIssue').style.backgroundColor = data.buttonColor;
+                                document.getElementById('idVerify').style.backgroundColor = data.buttonColor;
+                                document.title = data.credentialType + ' Verifiable Credentials';
+                            }
+                        });
+                </script>
+            </div>
+            <footer>
+                <p class="text-center text-gray tiny-text margin-top-75">
+                    <strong>SDK Version:</strong>not using VC SDK<br /><br />
+                    <strong>API Version:</strong>private preview<br /><br />
+                    <strong>Minimum MS Authenticator version required:</strong><br /><br />
+                    Android: 6.2104.2348<br />
+                    IOS: 6.5.53
+                </p>
+            </footer>
+        </div>
+    </body>
+</html>

@@ -229,6 +229,51 @@ namespace AA.DIDApi.Controllers
 
         #endregion Endpoints
 
+        #region Acuant
+
+        [HttpPost("acuant/accepted")]
+        public async Task<ActionResult> PostResponseAcuantAccepted()
+        {
+            string body = await GetRequestBodyAsync();
+            return BasePostResponseAcuant(body, "accepted");
+        }
+
+        [HttpPost("acuant/manual")]
+        public async Task<ActionResult> PostResponseAcuantManual()
+        {
+            string body = await GetRequestBodyAsync();
+            return BasePostResponseAcuant(body, "manual");
+        }
+
+        [HttpPost("acuant/denied")]
+        public async Task<ActionResult> PostResponseAcuantDenied()
+        {
+            string body = await GetRequestBodyAsync();
+            return BasePostResponseAcuant(body, "denied");
+        }
+
+        [HttpPost("acuant/repeated")]
+        public async Task<ActionResult> PostResponseAcuantRepeated()
+        {
+            string body = await GetRequestBodyAsync();
+            return BasePostResponseAcuant(body, "repeated");
+        }
+
+        [HttpPost("acuant/webhook")]
+        public async Task<ActionResult> PostResponseAcuantWebhook()
+        {
+            string body = await GetRequestBodyAsync();
+            return BasePostResponseAcuant(body, "webhook");
+        }
+
+        private ActionResult BasePostResponseAcuant(string body, string redirectLocation)
+        {
+            Logger.LogInformation($"{DateTime.UtcNow:o} -> {redirectLocation} -> {Request.Method} {Request.Scheme}://{Request.Host}{Request.Path}{Request.QueryString}: {body}");
+            return Redirect($"https://ccusdidpoc-vcapi.azurewebsites.net/acuant/{redirectLocation}.html");
+        }
+
+        #endregion Acuant
+
         #region Helpers
 
         protected string GetApiPath()
